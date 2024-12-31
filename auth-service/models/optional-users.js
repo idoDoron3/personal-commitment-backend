@@ -1,7 +1,7 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
 
-const Optional_users = sequelize.define('Optional_users', {
+const Optional_users = sequelize.define("Optional_users", {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -21,9 +21,9 @@ const Optional_users = sequelize.define('Optional_users', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('student', 'mentor', 'admin'),
+    type: DataTypes.ENUM("student", "mentor", "admin"),
     allowNull: false,
-    defaultValue: 'student',
+    defaultValue: "student",
   },
 });
 
