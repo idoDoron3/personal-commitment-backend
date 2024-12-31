@@ -3,10 +3,10 @@ const jwt = require("jsonwebtoken");
 
 exports.register = async (req, res) => {
   try {
-    const { firstname, lastname, email, password } = req.body;
+    const { first_name, last_name, email, password } = req.body;
     const user = await authService.registerUser(
-      firstname,
-      lastname,
+      first_name,
+      last_name,
       email,
       password
     );
@@ -20,6 +20,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const result = await authService.loginUser(email, password);
+    console.log(result.token); // TODO
     res.status(200).json(result);
   } catch (error) {
     res.status(401).json({ error: error.message });

@@ -1,7 +1,7 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
 
-const User = sequelize.define('User', {
+const User = sequelize.define("User", {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -25,9 +25,9 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('student', 'mentor', 'admin'),
+    type: DataTypes.ENUM("student", "mentor", "admin"),
     allowNull: false,
-    defaultValue: 'student',
+    defaultValue: "student",
   },
 });
 
