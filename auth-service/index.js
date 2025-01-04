@@ -1,9 +1,7 @@
 const express = require("express");
 const sequelize = require("./config/db");
-const User = require("./models/user");
-const Optional_users = require("./models/optional-users");
 const app = express();
-const PORT = process.env.SERVER_PORT;
+const PORT = process.env.SERVER_PORT || 3000;
 const routs = require("./routes/authRoute");
 
 require("dotenv").config(); // reload data from env file

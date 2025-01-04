@@ -27,11 +27,33 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.logout = (req, res) => {
+exports.refreshToken = async (req, res) => {
   try {
+      const { refreshToken } = req.body;
+      const result = await authService.refreshAccessToken(refreshToken);
+      res.status(200).json(result);
+  } catch (error) {
+      res.status(403).json({ error: error.message });
+  }
+};
+
+exports.logout = async(req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    await authService.logoutUser(refreshToken);
     // Invalidate the token (for stateless JWT, just inform the client to delete it)
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+      const { token, newPassword } = req.body;
+      await authService.resetPassword(token, newPassword);
+      res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+      res.status(400).json({ error: error.message });
   }
 };
