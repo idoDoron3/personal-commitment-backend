@@ -1,8 +1,10 @@
 const express = require('express');
+const authRoutes = require('./routes/authRoute');
+require('dotenv').config();
 const app = express();
 
-// Middleware for JSON parsing
 app.use(express.json());
+app.use('/auth', authRoutes); // Route for auth service
 
 // Example route
 app.get('/', (req, res) => {
@@ -16,7 +18,3 @@ app.listen(PORT, () => {
 });
 
 
-const gatewayRoutes = require('./src/routes/gatewayRoutes');
-
-// Use routes
-app.use('/gateway', gatewayRoutes);
