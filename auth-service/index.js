@@ -1,7 +1,7 @@
 const express = require("express");
 const sequelize = require("./config/db");
 const app = express();
-const PORT = process.env.SERVER_PORT || 3000;
+const PORT = process.env.SERVER_PORT || 3001;
 const routs = require("./routes/authRoute");
 
 require("dotenv").config(); // reload data from env file
