@@ -38,7 +38,7 @@ exports.loginUser = async (email, password) => {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
 
-    const accessToken = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1m' });
+    const accessToken = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '3m' });
     const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '1d' });
     const existingToken = await RefreshToken.findOne({ where: { user_id: user.id } });
     if (existingToken) {
@@ -93,18 +93,3 @@ exports.resetPassword = async (token, newPassword) => {
   await user.save();
 };
 
-// exports.loginUser = async (email, password) => {
-//   const user = await User.findOne({ where: { email } });
-//   if (!user) throw new Error("User not found");
-
-//   const isValidhashPassword1 = await bcrypt.compare(password, user.password);
-//   if (!isValidhashPassword1) throw new Error("Invalid password");
-
-//   const token = jwt.sign(
-//     { id: user.id, role: user.role },
-//     process.env.JWT_SECRET,
-//     { expiresIn: "1h" }
-//   );
-
-//   return { user, token };
-// };

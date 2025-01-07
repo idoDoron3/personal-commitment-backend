@@ -6,21 +6,33 @@ const SERVICES = {
     // lesson: process.env.LESSON_SERVICE_URL || 'http://localhost:3002',
     
 };
+const publicRoutes = new Set(['/register', '/login', '/refresh']);
+
 
 exports.forwardRequest = async (req, res, service, endpoint) => {
     try {
-        console.log("start request from auth servic")
-        console.log('Final URL:', `${SERVICES[service]}/auth${endpoint}`);
-        console.log('Request body:', req.body);  // בדיקה של גוף הבקשה
+        const isPublicRoute = publicRoutes.has(endpoint);
 
+        let headers = {
+            'Content-Type': 'application/json',
+        };
+        if (!isPublicRoute) {
+            const { authorization } = req.headers;
+            if (!authorization) {
+                return res.status(401).json({ error: 'Authorization header is missing' });
+            }
+            const token = authorization.split(' ')[1]; // "Bearer <token>"
 
+            if (!token) {
+                return res.status(401).json({ error: 'Token not found' });
+            }
+            headers['Authorization'] = `Bearer ${token}`;
+        }
         const response = await axios({
             method: req.method,
             url: `${SERVICES[service]}/auth${endpoint}`, 
             data: req.body,
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
         });
         res.status(response.status).json(response.data);
     } catch (error) {

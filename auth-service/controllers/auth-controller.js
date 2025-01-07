@@ -41,7 +41,6 @@ exports.logout = async(req, res) => {
   try {
     const { refreshToken } = req.body;
     await authService.logoutUser(refreshToken);
-    // Invalidate the token (for stateless JWT, just inform the client to delete it)
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });
@@ -50,7 +49,16 @@ exports.logout = async(req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-      const { token, newPassword } = req.body;
+      const {newPassword } = req.body;
+      const { authorization } = req.headers; //TODO
+      if (!authorization) {
+        return res.status(401).json({ error: 'Authorization header is missing' });
+      }
+      const token = authorization.split(' ')[1]; // This assumes the format is "Bearer <token>"
+      // Check if the token exists
+      if (!token) {
+      return res.status(401).json({ error: 'Token not found' });
+      }
       await authService.resetPassword(token, newPassword);
       res.status(200).json({ message: 'Password reset successfully' });
   } catch (error) {
