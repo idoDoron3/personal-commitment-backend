@@ -54,6 +54,7 @@ exports.resetPassword = async (req, res) => {
       await authService.resetPassword(token, newPassword);
       res.status(200).json({ message: 'Password reset successfully' });
   } catch (error) {
+      console.log("must provide tokem in body request")
       res.status(400).json({ error: error.message });
   }
 };
