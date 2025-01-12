@@ -120,10 +120,20 @@ exports.refreshToken = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    await authService.logoutUser(refreshToken);
+    const { user_id } = req.body;
+    await authService.logoutUser(user_id);
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });
   }
 };
+
+// exports.logout = async (req, res) => {
+//   try {
+//     const { refreshToken } = req.body;
+//     await authService.logoutUser(refreshToken);
+//     res.status(200).json({ message: "User logged out successfully" });
+//   } catch (error) {
+//     res.status(500).json({ error: "Logout failed" });
+//   }
+// };

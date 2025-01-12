@@ -84,14 +84,13 @@ router.post("/login", (req, res) =>
 router.post("/refresh", (req, res) =>
   authController.handleRequest(req, res, "auth", "/refresh")
 );
-// router.post('/forgot-password', (req, res) => authController.handleRequest(req, res, 'auth', '/forgot-password'));
-// protected routes (require token)
+
 /**
  * @swagger
  * /logout:
  *   post:
  *     summary: Log out a user
- *     description: Logs out the user by invalidating the refresh token.
+ *     description: Logs out the user by invalidating the refresh token using the user's ID.
  *     requestBody:
  *       required: true
  *       content:
@@ -99,11 +98,14 @@ router.post("/refresh", (req, res) =>
  *           schema:
  *             type: object
  *             properties:
- *               refreshToken:
- *                 type: string
+ *               user_id:
+ *                 type: integer
+ *                 example: 4
  *     responses:
  *       200:
  *         description: Successfully logged out
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Error during logout
  */
