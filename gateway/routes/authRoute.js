@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/gateway-controller');
-const { authenticateToken } = require('../middleware/auth-middleware');
+const authController = require("../controllers/gateway-controller");
+const { authenticateToken } = require("../middleware/auth-middleware");
 
 // public routes (no token required)
 /**
@@ -31,7 +31,9 @@ const { authenticateToken } = require('../middleware/auth-middleware');
  *       400:
  *         description: Invalid input
  */
-router.post('/register', (req, res) => authController.handleRequest(req, res, 'auth', '/register'));
+router.post("/register", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/register")
+);
 /**
  * @swagger
  * /login:
@@ -55,7 +57,9 @@ router.post('/register', (req, res) => authController.handleRequest(req, res, 'a
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', (req, res) => authController.handleRequest(req, res, 'auth', '/login'));
+router.post("/login", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/login")
+);
 /**
  * @swagger
  * /refresh:
@@ -77,7 +81,9 @@ router.post('/login', (req, res) => authController.handleRequest(req, res, 'auth
  *       403:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh', (req, res) => authController.handleRequest(req, res, 'auth', '/refresh'));
+router.post("/refresh", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/refresh")
+);
 // router.post('/forgot-password', (req, res) => authController.handleRequest(req, res, 'auth', '/forgot-password'));
 // protected routes (require token)
 /**
@@ -101,13 +107,16 @@ router.post('/refresh', (req, res) => authController.handleRequest(req, res, 'au
  *       500:
  *         description: Error during logout
  */
-router.post('/logout', (req, res) => authController.handleRequest(req, res, 'auth', '/logout'));
+router.post("/logout", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/logout")
+);
+
 /**
  * @swagger
- * /reset-password:
- *   post:
- *     summary: Reset user password
- *     description: Allows the user to reset their password using a valid token.
+ * /auth/reset-password:
+ *   patch:
+ *     summary: Forward reset password request to Auth Service
+ *     description: Forwards the reset password request to the Auth Service.
  *     requestBody:
  *       required: true
  *       content:
@@ -115,17 +124,58 @@ router.post('/logout', (req, res) => authController.handleRequest(req, res, 'aut
  *           schema:
  *             type: object
  *             properties:
- *               token:
+ *               email:
  *                 type: string
+ *                 example: user@example.com
+ *               resetCode:
+ *                 type: string
+ *                 example: "123456"
  *               newPassword:
  *                 type: string
+ *                 example: "NewSecurePassword123"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "NewSecurePassword123"
  *     responses:
  *       200:
  *         description: Password reset successfully
  *       400:
- *         description: Invalid token or password
+ *         description: Invalid or expired reset code
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
-router.post('/reset-password', authenticateToken, (req, res) => authController.handleRequest(req, res, 'auth', '/reset-password'));
+router.patch("/reset-password", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/reset-password")
+);
 
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Forward forgot password request to Auth Service
+ *     description: Forwards the forgot password request to the Auth Service.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: Reset code sent successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post("/forgot-password", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/forgot-password")
+);
 
 module.exports = router;

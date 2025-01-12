@@ -29,6 +29,14 @@ const User = sequelize.define("User", {
     allowNull: false,
     defaultValue: "student",
   },
+  resetToken: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  resetTokenExpiry: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 });
 
 module.exports = User;
