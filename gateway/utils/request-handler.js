@@ -11,6 +11,7 @@ const publicRoutes = new Set([
   "/refresh",
   "/reset-password",
   "/forgot-password",
+  "/logout",
 ]);
 
 exports.forwardRequest = async (req, res, service, endpoint) => {

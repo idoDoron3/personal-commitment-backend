@@ -127,23 +127,3 @@ exports.logout = async (req, res) => {
     res.status(500).json({ error: "Logout failed" });
   }
 };
-
-// exports.resetPassword = async (req, res) => {
-//   try {
-//     const { newPassword } = req.body;
-//     const { authorization } = req.headers; //TODO
-//     if (!authorization) {
-//       return res.status(401).json({ error: "Authorization header is missing" });
-//     }
-//     const token = authorization.split(" ")[1]; // This assumes the format is "Bearer <token>"
-//     // Check if the token exists
-//     if (!token) {
-//       return res.status(401).json({ error: "Token not found" });
-//     }
-//     await authService.resetPassword(token, newPassword);
-//     res.status(200).json({ message: "Password reset successfully" });
-//   } catch (error) {
-//     console.log("must provide tokem in body request");
-//     res.status(400).json({ error: error.message });
-//   }
-// };
