@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/mail");
 const crypto = require("crypto");
+const ms = require("ms");
 
 exports.registerUser = async (first_name, last_name, email, password) => {
   // Check if the user exists in optional_users
@@ -28,73 +29,87 @@ exports.registerUser = async (first_name, last_name, email, password) => {
 };
 
 exports.loginUser = async (email, password) => {
-  try {
-    const user = await User.findOne({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new Error("Invalid email or password");
-    }
-
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables");
-    }
-
-    const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "3m" }
-    );
-    const refreshToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "1d" }
-    );
-    const existingToken = await RefreshToken.findOne({
-      where: { user_id: user.id },
-    });
-    if (existingToken) {
-      // update curr token
-      existingToken.token = refreshToken;
-      existingToken.expiry = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 days
-      await existingToken.save();
-    } else {
-      await RefreshToken.create({
-        user_id: user.id,
-        token: refreshToken,
-        expiry: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // 1 days expiry
-      });
-    }
-    return { user, accessToken, refreshToken };
-  } catch (error) {
-    console.error("Error in loginUser:", error.message);
+  const user = await User.findOne({ where: { email } });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     throw new Error("Invalid email or password");
   }
-};
 
-exports.refreshAccessToken = async (refreshToken) => {
-  const tokenRecord = await RefreshToken.findOne({
-    where: { token: refreshToken, expiry: { [Sequelize.Op.gt]: new Date() } },
-  });
-  if (!tokenRecord) throw new Error("Invalid or expired refresh token");
-
-  const user = await User.findOne({ where: { id: tokenRecord.user_id } });
-  if (!user) throw new Error("User not found");
-
-  const newAccessToken = jwt.sign(
+  const accessToken = jwt.sign(
     { id: user.id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
-  const newRefreshToken = jwt.sign(
+  const refreshToken = jwt.sign(
     { id: user.id },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );
 
-  tokenRecord.token = newRefreshToken;
-  tokenRecord.expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await tokenRecord.save();
+  const existingToken = await RefreshToken.findOne({
+    where: { user_id: user.id },
+  });
+  const expiryDate = new Date(
+    Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
+  );
+  if (existingToken) {
+    existingToken.token = refreshToken;
+    existingToken.expiry = expiryDate;
+    await existingToken.save();
+  } else {
+    await RefreshToken.create({
+      user_id: user.id,
+      token: refreshToken,
+      expiry: expiryDate,
+    });
+  }
 
-  return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  return { user, accessToken, refreshToken };
+};
+
+exports.refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      throw new Error("Refresh token not provided");
+    }
+
+    const tokenRecord = await RefreshToken.findOne({
+      where: { token: refreshToken, expiry: { [Sequelize.Op.gt]: new Date() } },
+    });
+    if (!tokenRecord) throw new Error("Invalid or expired refresh token");
+
+    const user = await User.findOne({ where: { id: tokenRecord.user_id } });
+    if (!user) throw new Error("User not found");
+
+    const newAccessToken = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    );
+    const newRefreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+    );
+
+    tokenRecord.token = newRefreshToken;
+    tokenRecord.expiry = new Date(
+      Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
+    );
+    await tokenRecord.save();
+
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
+    });
+
+    return res.status(200).json({ accessToken: newAccessToken });
+  } catch (error) {
+    console.error("Error in refreshAccessToken:", error.message);
+    return res.status(401).json({ error: error.message });
+  }
 };
 
 exports.logoutUser = async (user_id) => {

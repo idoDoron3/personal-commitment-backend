@@ -53,16 +53,31 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await authService.loginUser(email, password);
-    res.status(200).json(result);
+    const { user, accessToken, refreshToken } = await authService.loginUser(
+      email,
+      password
+    );
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ accessToken, user });
   } catch (error) {
-    res.status(401).json({ error: error.message });
+    console.error("Error in login function:", error.message);
+    res.status(401).json({ error: "Invalid email or password" });
   }
 };
 
 exports.refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "No refresh token provided" });
+    }
+
     const result = await authService.refreshAccessToken(refreshToken);
     res.status(200).json(result);
   } catch (error) {
