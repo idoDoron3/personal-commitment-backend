@@ -4,7 +4,8 @@ const OptionalUser = require("../models/optional-users");
 const RefreshToken = require("../models/RefreshToken");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// const nodemailer = require('nodemailer');
+const sendEmail = require("../utils/mail");
+const crypto = require("crypto");
 
 exports.registerUser = async (first_name, last_name, email, password) => {
   // Check if the user exists in optional_users
@@ -107,5 +108,70 @@ exports.resetPassword = async (token, newPassword) => {
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashedPassword;
+  await user.save();
+};
+
+exports.findUserAndUpdateWithResetCode = async (email) => {
+  const user = await User.findOne({ where: { email } });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const resetCode = Math.floor(100000 + Math.random() * 900000);
+  const hashedCode = await bcrypt.hash(resetCode.toString(), 10);
+  const expiry = new Date(Date.now() + 5 * 60 * 1000);
+
+  user.resetToken = hashedCode;
+  user.resetTokenExpiry = expiry;
+  await user.save();
+
+  return { user, resetCode };
+};
+
+exports.sendResetCodeEmail = async (email, resetCode) => {
+  await sendEmail(email, `Your reset code is: ${resetCode}`);
+};
+
+exports.resetPasswordProcess = async (
+  email,
+  resetCode,
+  newPassword,
+  confirmPassword
+) => {
+  if (!email || !resetCode || !newPassword || !confirmPassword) {
+    throw new Error("All fields are required");
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new Error("Passwords do not match");
+  }
+
+  const user = await User.findOne({ where: { email } });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isCodeValid = await bcrypt.compare(
+    resetCode.toString(),
+    user.resetToken
+  );
+  if (!isCodeValid || user.resetTokenExpiry < Date.now()) {
+    throw new Error("Invalid or expired reset code");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+  user.resetToken = null;
+  user.resetTokenExpiry = null;
+  await user.save();
+
+  return { message: "Password updated successfully" }; // מחזיר הודעת הצלחה
+};
+
+exports.updatePassword = async (user, newPassword) => {
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+  user.resetToken = null;
+  user.resetTokenExpiry = null;
   await user.save();
 };
