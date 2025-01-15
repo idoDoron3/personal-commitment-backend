@@ -2,9 +2,9 @@ const express = require("express");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
-require("dotenv").config();
 const app = express();
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 
 // Swagger setup
 const options = {

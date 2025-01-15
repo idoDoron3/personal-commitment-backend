@@ -1,5 +1,6 @@
 const authService = require("../service/auth-Service");
 
+// Handles the "Forgot Password" process by generating and emailing a reset code to the user
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -12,12 +13,16 @@ exports.forgotPassword = async (req, res) => {
     res.status(200).json({ message: "Reset code sent to your email" });
   } catch (error) {
     console.error(error.message);
+    if (error.message === "User not found") {
+      return res.status(404).json({ error: error.message });
+    }
     res
       .status(500)
       .json({ message: "Something went wrong -- forgotPassword --" });
   }
 };
 
+// Handles the password reset process using a reset code
 exports.resetPassword = async (req, res) => {
   const { email, resetCode, newPassword, confirmPassword } = req.body;
 
@@ -35,6 +40,7 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+// Registers a new user in the system
 exports.register = async (req, res) => {
   try {
     const { first_name, last_name, email, password } = req.body;
@@ -50,6 +56,7 @@ exports.register = async (req, res) => {
   }
 };
 
+// Authenticates a user and generates tokens
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -58,6 +65,7 @@ exports.login = async (req, res) => {
       password
     );
 
+    // Save refresh token in a cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
@@ -71,6 +79,7 @@ exports.login = async (req, res) => {
   }
 };
 
+// Generates a new access token using a valid refresh token
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.cookies;
@@ -85,6 +94,7 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
+// Logs out the user by invalidating their session or tokens
 exports.logout = async (req, res) => {
   try {
     const { user_id } = req.body;

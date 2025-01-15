@@ -7,7 +7,9 @@ const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/mail");
 const crypto = require("crypto");
 const ms = require("ms");
+require("dotenv").config();
 
+// Registers a new user, ensuring the email is allowed and unique
 exports.registerUser = async (first_name, last_name, email, password) => {
   // Check if the user exists in optional_users
   const signUser = await User.findOne({ where: { email } });
@@ -28,6 +30,7 @@ exports.registerUser = async (first_name, last_name, email, password) => {
   return user;
 };
 
+// Authenticates a user and returns access and refresh tokens
 exports.loginUser = async (email, password) => {
   const user = await User.findOne({ where: { email } });
   if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -66,6 +69,7 @@ exports.loginUser = async (email, password) => {
   return { user, accessToken, refreshToken };
 };
 
+// Refreshes the access token using a valid refresh token
 exports.refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.cookies;
@@ -112,10 +116,12 @@ exports.refreshAccessToken = async (req, res) => {
   }
 };
 
+// Logs out a user by deleting their refresh token
 exports.logoutUser = async (user_id) => {
   await RefreshToken.destroy({ where: { user_id: user_id } });
 };
 
+// Resets the password using a token
 exports.resetPassword = async (token, newPassword) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const user = await User.findOne({ where: { id: decoded.id } });
@@ -126,15 +132,16 @@ exports.resetPassword = async (token, newPassword) => {
   await user.save();
 };
 
+// Finds a user and generates a reset code for password recovery
 exports.findUserAndUpdateWithResetCode = async (email) => {
   const user = await User.findOne({ where: { email } });
   if (!user) {
     throw new Error("User not found");
   }
 
-  const resetCode = Math.floor(100000 + Math.random() * 900000);
+  const resetCode = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit code
   const hashedCode = await bcrypt.hash(resetCode.toString(), 10);
-  const expiry = new Date(Date.now() + 5 * 60 * 1000);
+  const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
   user.resetToken = hashedCode;
   user.resetTokenExpiry = expiry;
@@ -143,10 +150,12 @@ exports.findUserAndUpdateWithResetCode = async (email) => {
   return { user, resetCode };
 };
 
+// Sends an email with the reset code for password recovery
 exports.sendResetCodeEmail = async (email, resetCode) => {
   await sendEmail(email, `Your reset code is: ${resetCode}`);
 };
 
+// Handles password reset with validation and updates the password
 exports.resetPasswordProcess = async (
   email,
   resetCode,
@@ -183,6 +192,7 @@ exports.resetPasswordProcess = async (
   return { message: "Password updated successfully" }; // מחזיר הודעת הצלחה
 };
 
+// Updates the user's password directly
 exports.updatePassword = async (user, newPassword) => {
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashedPassword;
