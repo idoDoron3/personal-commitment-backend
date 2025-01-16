@@ -75,12 +75,13 @@ router.post("/login", authController.login);
  *         description: Error during logout
  */
 router.post("/logout", authController.logout);
+
 /**
  * @swagger
  * /reset-password:
- *   post:
- *     summary: Reset user password
- *     description: Allows the user to reset their password using a valid token.
+ *   patch:
+ *     summary: Reset the user's password
+ *     description: Resets the user's password after verifying the OTP.
  *     requestBody:
  *       required: true
  *       content:
@@ -88,17 +89,56 @@ router.post("/logout", authController.logout);
  *           schema:
  *             type: object
  *             properties:
- *               token:
+ *               email:
  *                 type: string
+ *                 example: user@example.com
+ *               resetCode:
+ *                 type: string
+ *                 example: "123456"
  *               newPassword:
  *                 type: string
+ *                 example: "NewSecurePassword123"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "NewSecurePassword123"
  *     responses:
  *       200:
  *         description: Password reset successfully
  *       400:
- *         description: Invalid token or password
+ *         description: Invalid or expired reset code
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
-router.post('/reset-password', authController.resetPassword);
+
+router.patch("/reset-password", authController.resetPassword);
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Send a password reset code
+ *     description: Sends a one-time password (OTP) to the user's email for password reset.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: Reset code sent successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post("/forgot-password", authController.forgotPassword);
+
 /**
  * @swagger
  * /refresh:
@@ -120,17 +160,6 @@ router.post('/reset-password', authController.resetPassword);
  *       403:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh', authController.refreshToken);
-
-//router.post("/forgotPassword", authController.forgotPassword);
-// router.patch("/resetPassword/:token", authController.resetPassword);
-// router.patch(
-//   "/updateMyPassword",
-//   authController.protect,
-//   authController.updatePassword
-// );
-
-// router.patch('/updateMe', authController.protect, userController.updateMe);
-// router.delete('/deleteMe', authController.protect, userController.deleteMe);
+router.post("/refresh", authController.refreshToken);
 
 module.exports = router;

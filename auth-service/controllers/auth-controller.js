@@ -1,6 +1,46 @@
 const authService = require("../service/auth-Service");
-const jwt = require("jsonwebtoken");
 
+// Handles the "Forgot Password" process by generating and emailing a reset code to the user
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const { user, resetCode } =
+      await authService.findUserAndUpdateWithResetCode(email);
+
+    await authService.sendResetCodeEmail(user.email, resetCode);
+
+    res.status(200).json({ message: "Reset code sent to your email" });
+  } catch (error) {
+    console.error(error.message);
+    if (error.message === "User not found") {
+      return res.status(404).json({ error: error.message });
+    }
+    res
+      .status(500)
+      .json({ message: "Something went wrong -- forgotPassword --" });
+  }
+};
+
+// Handles the password reset process using a reset code
+exports.resetPassword = async (req, res) => {
+  const { email, resetCode, newPassword, confirmPassword } = req.body;
+
+  try {
+    const result = await authService.resetPasswordProcess(
+      email,
+      resetCode,
+      newPassword,
+      confirmPassword
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Registers a new user in the system
 exports.register = async (req, res) => {
   try {
     const { first_name, last_name, email, password } = req.body;
@@ -16,53 +56,51 @@ exports.register = async (req, res) => {
   }
 };
 
+// Authenticates a user and generates tokens
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await authService.loginUser(email, password);
-    console.log(result.token); // TODO
-    res.status(200).json(result);
+    const { user, accessToken, refreshToken } = await authService.loginUser(
+      email,
+      password
+    );
+
+    // Save refresh token in a cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ accessToken, user });
   } catch (error) {
-    res.status(401).json({ error: error.message });
+    console.error("Error in login function:", error.message);
+    res.status(401).json({ error: "Invalid email or password" });
   }
 };
 
+// Generates a new access token using a valid refresh token
 exports.refreshToken = async (req, res) => {
   try {
-      const { refreshToken } = req.body;
-      const result = await authService.refreshAccessToken(refreshToken);
-      res.status(200).json(result);
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "No refresh token provided" });
+    }
+
+    const result = await authService.refreshAccessToken(refreshToken);
+    res.status(200).json(result);
   } catch (error) {
-      res.status(403).json({ error: error.message });
+    res.status(403).json({ error: error.message });
   }
 };
 
-exports.logout = async(req, res) => {
+// Logs out the user by invalidating their session or tokens
+exports.logout = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    await authService.logoutUser(refreshToken);
+    const { user_id } = req.body;
+    await authService.logoutUser(user_id);
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });
-  }
-};
-
-exports.resetPassword = async (req, res) => {
-  try {
-      const {newPassword } = req.body;
-      const { authorization } = req.headers; //TODO
-      if (!authorization) {
-        return res.status(401).json({ error: 'Authorization header is missing' });
-      }
-      const token = authorization.split(' ')[1]; // This assumes the format is "Bearer <token>"
-      // Check if the token exists
-      if (!token) {
-      return res.status(401).json({ error: 'Token not found' });
-      }
-      await authService.resetPassword(token, newPassword);
-      res.status(200).json({ message: 'Password reset successfully' });
-  } catch (error) {
-      console.log("must provide tokem in body request")
-      res.status(400).json({ error: error.message });
   }
 };
