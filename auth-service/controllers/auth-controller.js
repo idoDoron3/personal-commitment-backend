@@ -22,20 +22,31 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Handles the password reset process using a reset code
-exports.resetPassword = async (req, res) => {
-  const { email, resetCode, newPassword, confirmPassword } = req.body;
+exports.verifyResetCode = async (req, res) => {
+  const { email, resetCode } = req.body;
 
   try {
-    const result = await authService.resetPasswordProcess(
-      email,
-      resetCode,
+    const { tempToken, message } =
+      await authService.verifyResetCodeAndIssueToken(email, resetCode);
+    res.status(200).json({ message, tempToken });
+  } catch (error) {
+    console.error("Error in verifyResetCode:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { tempToken, newPassword, confirmPassword } = req.body;
+
+  try {
+    const result = await authService.updatePasswordWithToken(
+      tempToken,
       newPassword,
       confirmPassword
     );
     res.status(200).json(result);
   } catch (error) {
-    console.error(error.message);
+    console.error("Error in updatePassword:", error.message);
     res.status(400).json({ error: error.message });
   }
 };
@@ -65,10 +76,11 @@ exports.login = async (req, res) => {
       password
     );
 
-    // Save refresh token in a cookie
+    //Save refresh token in a cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -82,15 +94,10 @@ exports.login = async (req, res) => {
 // Generates a new access token using a valid refresh token
 exports.refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
-    if (!refreshToken) {
-      return res.status(401).json({ error: "No refresh token provided" });
-    }
-
-    const result = await authService.refreshAccessToken(refreshToken);
-    res.status(200).json(result);
+    await authService.refreshAccessToken(req, res);
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    console.error("Error in refresh:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -99,6 +106,17 @@ exports.logout = async (req, res) => {
   try {
     const { user_id } = req.body;
     await authService.logoutUser(user_id);
+
+    //console.log("Cookies before clearing:", req.cookies);
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "Strict",
+    });
+
+    // const setCookieHeader = res.getHeaders()["set-cookie"];
+    // console.log("Set-Cookie header after clearing:", setCookieHeader);
+
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });

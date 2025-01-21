@@ -2,13 +2,22 @@ const express = require("express");
 const sequelize = require("./config/db");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
 const routs = require("./routes/authRoute");
 
 require("dotenv").config(); // reload data from env file
-
+// CORS Configuration
+app.use(
+  cors({
+    origin: "http://localhost:3001", // כתובת ה-Gateway
+    credentials: true, // מאפשר cookies
+  })
+);
 app.use(express.json());
+app.use(cookieParser()); // הוסף את cookie-parser
 
 // Swagger definitions
 const options = {
