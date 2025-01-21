@@ -17,6 +17,8 @@ const publicRoutes = new Set([
   "/logout",
 ]);
 
+const routesRequiringCookies = new Set(["/login", "/refresh"]);
+
 // Forwards HTTP requests to the appropriate microservice
 exports.forwardRequest = async (req, res, service, endpoint) => {
   try {
@@ -42,13 +44,24 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Forward the request to the specified service and endpoint
+    //Forward the request to the specified service and endpoint
     const response = await axios({
       method: req.method,
       url: `${process.env[`${service.toUpperCase()}_SERVICE_URL`]}${endpoint}`,
       data: req.body,
       headers: headers,
+      withCredentials: true, // TODO: adding cookies, if not working delete this
     });
+
+    // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת
+    if (routesRequiringCookies.has(endpoint)) {
+      const cookies = response.headers["set-cookie"];
+      if (cookies) {
+        cookies.forEach((cookie) => {
+          res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
+        });
+      }
+    }
 
     // Return the response from the microservice
     res.status(response.status).json(response.data);

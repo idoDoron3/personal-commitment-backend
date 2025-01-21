@@ -4,7 +4,16 @@ const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
 const app = express();
 const cookieParser = require("cookie-parser");
+const cors = require("cors"); // ייבוא CORS
+
 require("dotenv").config();
+
+app.use(
+  cors({
+    origin: "http://localhost:3000", // כתובת הלקוח
+    credentials: true, // מאפשר cookies
+  })
+);
 
 // Swagger setup
 const options = {
@@ -37,6 +46,9 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`API Gateway running on port ${PORT}`);
+  // console.log(
+  //   `Swagger documentation available at: http://132.73.210.155:${PORT}/api-docs`
+  // );
   console.log(
     `Swagger documentation available at: http://localhost:${PORT}/api-docs`
   );

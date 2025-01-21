@@ -65,14 +65,16 @@ exports.login = async (req, res) => {
       password
     );
 
-    // Save refresh token in a cookie
+    //Save refresh token in a cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
+      sameSite: "None", //TODO: זה אמור להעביר את העוגיה בין דומיינים שונים
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({ accessToken, user });
+    //res.status(200).json({ user });
   } catch (error) {
     console.error("Error in login function:", error.message);
     res.status(401).json({ error: "Invalid email or password" });
