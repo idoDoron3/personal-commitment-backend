@@ -12,7 +12,8 @@ const publicRoutes = new Set([
   "/register",
   "/login",
   "/refresh",
-  "/reset-password",
+  "/verify-reset-code",
+  "/update-password",
   "/forgot-password",
   "/logout",
 ]);

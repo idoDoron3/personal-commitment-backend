@@ -155,25 +155,9 @@ exports.sendResetCodeEmail = async (email, resetCode) => {
   await sendEmail(email, `Your reset code is: ${resetCode}`);
 };
 
-// Handles password reset with validation and updates the password
-exports.resetPasswordProcess = async (
-  email,
-  resetCode,
-  newPassword,
-  confirmPassword
-) => {
-  if (!email || !resetCode || !newPassword || !confirmPassword) {
-    throw new Error("All fields are required");
-  }
-
-  if (newPassword !== confirmPassword) {
-    throw new Error("Passwords do not match");
-  }
-
+exports.verifyResetCodeAndIssueToken = async (email, resetCode) => {
   const user = await User.findOne({ where: { email } });
-  if (!user) {
-    throw new Error("User not found");
-  }
+  if (!user) throw new Error("User not found");
 
   const isCodeValid = await bcrypt.compare(
     resetCode.toString(),
@@ -183,20 +167,45 @@ exports.resetPasswordProcess = async (
     throw new Error("Invalid or expired reset code");
   }
 
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  user.password = hashedPassword;
-  user.resetToken = null;
-  user.resetTokenExpiry = null;
-  await user.save();
+  // יצירת JWT זמני
+  const tempToken = jwt.sign(
+    { id: user.id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: "10m" } // תוקף של 10 דקות
+  );
 
-  return { message: "Password updated successfully" }; // מחזיר הודעת הצלחה
+  return { tempToken, message: "Reset code verified successfully" };
 };
 
-// Updates the user's password directly
-exports.updatePassword = async (user, newPassword) => {
+exports.updatePasswordWithToken = async (
+  tempToken,
+  newPassword,
+  confirmPassword
+) => {
+  if (!tempToken || !newPassword || !confirmPassword) {
+    throw new Error("All fields are required");
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new Error("Passwords do not match");
+  }
+
+  // אימות ה-JWT
+  let decoded;
+  try {
+    decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+  } catch (error) {
+    throw new Error("Invalid or expired token");
+  }
+
+  const user = await User.findOne({ where: { id: decoded.id } });
+  if (!user) throw new Error("User not found");
+
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashedPassword;
   user.resetToken = null;
   user.resetTokenExpiry = null;
   await user.save();
+
+  return { message: "Password updated successfully" };
 };

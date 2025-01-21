@@ -251,10 +251,10 @@ router.post("/logout", (req, res) =>
 
 /**
  * @swagger
- * /reset-password:
- *   patch:
- *     summary: Reset user password
- *     description: Resets the user's password using a reset code sent to their email.
+ * /verify-reset-code:
+ *   post:
+ *     summary: Verify reset code
+ *     description: Verifies the reset code and forwards the request to the Auth Service.
  *     tags:
  *       - Authentication
  *     requestBody:
@@ -266,28 +266,64 @@ router.post("/logout", (req, res) =>
  *             required:
  *               - email
  *               - resetCode
- *               - newPassword
- *               - confirmPassword
  *             properties:
  *               email:
  *                 type: string
- *                 description: The user's email address.
  *                 example: user@example.com
  *               resetCode:
  *                 type: string
- *                 description: The reset code sent to the user's email.
  *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Reset code verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Reset code verified successfully"
+ *                 tempToken:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ */
+router.post("/verify-reset-code", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/verify-reset-code")
+);
+
+/**
+ * @swagger
+ * /update-password:
+ *   patch:
+ *     summary: Update user password
+ *     description: Updates the user's password by forwarding the request to the Auth Service.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tempToken
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               tempToken:
+ *                 type: string
+ *                 description: Temporary token issued during reset code verification.
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *               newPassword:
  *                 type: string
- *                 description: The new password the user wants to set.
  *                 example: "NewSecurePassword123"
  *               confirmPassword:
  *                 type: string
- *                 description: Confirmation of the new password.
  *                 example: "NewSecurePassword123"
  *     responses:
  *       200:
- *         description: Password reset successfully
+ *         description: Password updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -296,39 +332,9 @@ router.post("/logout", (req, res) =>
  *                 message:
  *                   type: string
  *                   example: "Password updated successfully"
- *       400:
- *         description: Bad request - invalid input or mismatched passwords
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Passwords do not match"
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "User not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal Server Error"
  */
-router.patch("/reset-password", (req, res) =>
-  authController.handleRequest(req, res, "auth", "/reset-password")
+router.patch("/update-password", (req, res) =>
+  authController.handleRequest(req, res, "auth", "/update-password")
 );
 
 /**

@@ -8,7 +8,9 @@ router.post("/login", authController.login);
 
 router.post("/logout", authController.logout);
 
-router.patch("/reset-password", authController.resetPassword);
+router.post("/verify-reset-code", authController.verifyResetCode);
+
+router.patch("/update-password", authController.updatePassword);
 
 router.post("/forgot-password", authController.forgotPassword);
 

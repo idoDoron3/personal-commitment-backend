@@ -22,20 +22,31 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Handles the password reset process using a reset code
-exports.resetPassword = async (req, res) => {
-  const { email, resetCode, newPassword, confirmPassword } = req.body;
+exports.verifyResetCode = async (req, res) => {
+  const { email, resetCode } = req.body;
 
   try {
-    const result = await authService.resetPasswordProcess(
-      email,
-      resetCode,
+    const { tempToken, message } =
+      await authService.verifyResetCodeAndIssueToken(email, resetCode);
+    res.status(200).json({ message, tempToken });
+  } catch (error) {
+    console.error("Error in verifyResetCode:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { tempToken, newPassword, confirmPassword } = req.body;
+
+  try {
+    const result = await authService.updatePasswordWithToken(
+      tempToken,
       newPassword,
       confirmPassword
     );
     res.status(200).json(result);
   } catch (error) {
-    console.error(error.message);
+    console.error("Error in updatePassword:", error.message);
     res.status(400).json({ error: error.message });
   }
 };
@@ -74,7 +85,6 @@ exports.login = async (req, res) => {
     });
 
     res.status(200).json({ accessToken, user });
-    //res.status(200).json({ user });
   } catch (error) {
     console.error("Error in login function:", error.message);
     res.status(401).json({ error: "Invalid email or password" });
@@ -97,15 +107,15 @@ exports.logout = async (req, res) => {
     const { user_id } = req.body;
     await authService.logoutUser(user_id);
 
-    console.log("Cookies before clearing:", req.cookies);
+    //console.log("Cookies before clearing:", req.cookies);
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       sameSite: "Strict",
     });
 
-    const setCookieHeader = res.getHeaders()["set-cookie"];
-    console.log("Set-Cookie header after clearing:", setCookieHeader);
+    // const setCookieHeader = res.getHeaders()["set-cookie"];
+    // console.log("Set-Cookie header after clearing:", setCookieHeader);
 
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
