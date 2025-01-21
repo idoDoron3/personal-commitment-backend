@@ -96,6 +96,17 @@ exports.logout = async (req, res) => {
   try {
     const { user_id } = req.body;
     await authService.logoutUser(user_id);
+
+    //console.log("Cookies before clearing:", req.cookies);
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "Strict",
+    });
+
+    // const setCookieHeader = res.getHeaders()["set-cookie"];
+    // console.log("Set-Cookie header after clearing:", setCookieHeader);
+
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed" });
