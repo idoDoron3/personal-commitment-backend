@@ -44,13 +44,18 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    // Add Cookies to headers if available
+    if (req.headers.cookie) {
+      headers["Cookie"] = req.headers.cookie;
+    }
+
     //Forward the request to the specified service and endpoint
     const response = await axios({
       method: req.method,
       url: `${process.env[`${service.toUpperCase()}_SERVICE_URL`]}${endpoint}`,
       data: req.body,
       headers: headers,
-      withCredentials: true, // TODO: adding cookies, if not working delete this
+      withCredentials: true, //  adding cookies, if not working delete this
     });
 
     // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת

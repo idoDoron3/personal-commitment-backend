@@ -69,7 +69,7 @@ exports.login = async (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
-      sameSite: "None", //TODO: זה אמור להעביר את העוגיה בין דומיינים שונים
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -84,15 +84,10 @@ exports.login = async (req, res) => {
 // Generates a new access token using a valid refresh token
 exports.refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
-    if (!refreshToken) {
-      return res.status(401).json({ error: "No refresh token provided" });
-    }
-
-    const result = await authService.refreshAccessToken(refreshToken);
-    res.status(200).json(result);
+    await authService.refreshAccessToken(req, res);
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    console.error("Error in refresh:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
