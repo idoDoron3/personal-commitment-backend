@@ -6,15 +6,17 @@ This repository hosts the backend of the **Personal Commitment Application**, de
 
 ## Table of Contents
 
-1. [About the Project](#about-the-project)
-2. [Features](#features)
-3. [Technologies Used](#technologies-used)
-4. [Getting Started](#getting-started)
-   - [Prerequisites](#prerequisites)
-   - [Installation](#installation)
-   - [Running the Project](#running-the-project)
-5. [File Structure](#file-structure)
-6. [License](#license)
+- [Personal Commitment Backend](#personal-commitment-backend)
+  - [Table of Contents](#table-of-contents)
+  - [About the Project](#about-the-project)
+  - [Features](#features)
+  - [Technologies Used](#technologies-used)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Running the Project](#running-the-project)
+  - [File Structure](#file-structure)
+  - [License](#license)
 
 ---
 
@@ -75,20 +77,41 @@ Ensure you have the following installed on your system:
 
 4. Configure environment variables:
 
-   Create a `.env` file in the root directory and add the following:
+   Create two `.env` files:
 
-   ```plaintext
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_NAME=personal_commitment_db
-   DB_USER=root
-   DB_PASSWORD=your_password
-   JWT_SECRET=your_jwt_secret
-   SMTP_HOST=smtp.your-email.com
-   SMTP_PORT=587
-   SMTP_USER=your_email
-   SMTP_PASSWORD=your_password
-   ```
+   - **For the Gateway**:
+
+     Create a `.env` file inside the `gateway` directory and add the following:
+
+     ```plaintext
+     PORT=3000
+     JWT_SECRET=your_jwt_secret
+     AUTH_SERVICE_URL=http://localhost:3001/auth
+     ```
+
+   - **For the Auth Service**:
+
+     Create a `.env` file inside the `auth-service` directory and add the following:
+
+     ```plaintext
+         DB_NAME=Users_database
+         DB_USER=root
+         DB_PASSWORD= enter your password
+         DB_HOST=localhost
+         DB_PORT=3306
+         NODE_ENV=development
+         SERVER_PORT=3001
+         JWT_SECRET=your_jwt_secret
+         JWT_REFRESH_SECRET=your_jwt_refresh_secret
+
+         MAILTRAP_HOST=sandbox.smtp.mailtrap.io
+         MAILTRAP_PORT=25
+         MAILTRAP_USER= enter your username
+         MAILTRAP_PASS= enter your password
+
+         ACCESS_TOKEN_EXPIRY=10m
+         REFRESH_TOKEN_EXPIRY=7d
+     ```
 
 ### Running the Project
 
@@ -124,7 +147,6 @@ To start the project, you need to run the following services simultaneously:
 personal-commitment-backend/
 ├── auth-service/       # Handles user authentication and authorization
 ├── gateway/            # API Gateway for routing requests
-├── models/             # Sequelize models
 ├── seeders/            # Seed data for initial setup
 ├── package.json        # Project dependencies
 └── README.md           # Project documentation
