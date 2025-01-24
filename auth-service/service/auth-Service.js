@@ -13,11 +13,18 @@ require("dotenv").config();
 exports.registerUser = async (first_name, last_name, email, password) => {
   // Check if the user exists in optional_users
   const signUser = await User.findOne({ where: { email } });
-  if (signUser) throw new Error("This email is already been used");
+  if (signUser) {
+    const error = new Error("This email is already in use");
+    error.type = "EMAIL_ALREADY_USED";
+    throw error;
+  }
 
   const optionalUser = await OptionalUser.findOne({ where: { email } });
-  if (!optionalUser)
-    throw new Error("Registration is not allowed for this email");
+  if (!optionalUser) {
+    const error = new Error("Registration is not allowed for this email");
+    error.type = "EMAIL_NOT_ALLOWED";
+    throw error;
+  }
 
   const hashPassword = await bcrypt.hash(password, 10);
   const user = await User.create({
@@ -167,11 +174,10 @@ exports.verifyResetCodeAndIssueToken = async (email, resetCode) => {
     throw new Error("Invalid or expired reset code");
   }
 
-  // יצירת JWT זמני
   const tempToken = jwt.sign(
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
-    { expiresIn: "10m" } // תוקף של 10 דקות
+    { expiresIn: "10m" }
   );
 
   return { tempToken, message: "Reset code verified successfully" };
@@ -183,11 +189,15 @@ exports.updatePasswordWithToken = async (
   confirmPassword
 ) => {
   if (!tempToken || !newPassword || !confirmPassword) {
-    throw new Error("All fields are required");
+    const error = new Error("All fields are required");
+    error.type = "MISSING_FIELDS";
+    throw error;
   }
 
   if (newPassword !== confirmPassword) {
-    throw new Error("Passwords do not match");
+    const error = new Error("Passwords do not match");
+    error.type = "PASSWORD_MISMATCH";
+    throw error;
   }
 
   // אימות ה-JWT
@@ -195,11 +205,17 @@ exports.updatePasswordWithToken = async (
   try {
     decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
   } catch (error) {
-    throw new Error("Invalid or expired token");
+    const jwtError = new Error("Invalid or expired token");
+    jwtError.type = "INVALID_OR_EXPIRED_TOKEN";
+    throw jwtError;
   }
 
   const user = await User.findOne({ where: { id: decoded.id } });
-  if (!user) throw new Error("User not found");
+  if (!user) {
+    const error = new Error("User not found");
+    error.type = "USER_NOT_FOUND";
+    throw error;
+  }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashedPassword;
