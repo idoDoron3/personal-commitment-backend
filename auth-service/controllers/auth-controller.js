@@ -16,9 +16,7 @@ exports.forgotPassword = async (req, res) => {
     if (error.message === "User not found") {
       return res.status(404).json({ error: error.message });
     }
-    res
-      .status(500)
-      .json({ message: "Something went wrong -- forgotPassword --" });
+    res.status(500).json({ message: "Something went wrong" });
   }
 };
 
@@ -47,7 +45,19 @@ exports.updatePassword = async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error("Error in updatePassword:", error.message);
-    res.status(400).json({ error: error.message });
+    if (error.type === "MISSING_FIELDS") {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error.type === "PASSWORD_MISMATCH") {
+      return res.status(422).json({ error: error.message });
+    }
+    if (error.type === "INVALID_OR_EXPIRED_TOKEN") {
+      return res.status(401).json({ error: error.message });
+    }
+    if (error.type === "USER_NOT_FOUND") {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ message: "Something went wrong" });
   }
 };
 
@@ -63,7 +73,13 @@ exports.register = async (req, res) => {
     );
     res.status(201).json({ message: "User registered successfully", user });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (error.type === "EMAIL_ALREADY_USED") {
+      res.status(409).json({ error: error.message }); // Conflict
+    } else if (error.type === "EMAIL_NOT_ALLOWED") {
+      res.status(403).json({ error: error.message }); // Forbidden
+    } else {
+      res.status(400).json({ error: "An unexpected error occurred" }); // Bad Request
+    }
   }
 };
 

@@ -70,7 +70,27 @@ const { authenticateToken } = require("../middleware/auth-middleware");
  *               properties:
  *                 error:
  *                   type: string
+ *                   example: "An unexpected error occurred"
+ *       403:
+ *         description: Registration is not allowed for this email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  *                   example: "Registration is not allowed for this email"
+ *       409:
+ *         description: Email is already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "This email is already in use"
  */
 router.post("/register", (req, res) =>
   authController.handleRequest(req, res, "auth", "/register")
@@ -287,11 +307,21 @@ router.post("/logout", (req, res) =>
  *                 tempToken:
  *                   type: string
  *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Invalid or expired reset code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid or expired reset code"
  */
+
 router.post("/verify-reset-code", (req, res) =>
   authController.handleRequest(req, res, "auth", "/verify-reset-code")
 );
-
 /**
  * @swagger
  * /update-password:
@@ -332,7 +362,58 @@ router.post("/verify-reset-code", (req, res) =>
  *                 message:
  *                   type: string
  *                   example: "Password updated successfully"
+ *       400:
+ *         description: Bad Request - Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "All fields are required"
+ *       401:
+ *         description: Unauthorized - Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid or expired token"
+ *       404:
+ *         description: Not Found - User does not exist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       422:
+ *         description: Unprocessable Entity - Passwords do not match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Passwords do not match"
+ *       500:
+ *         description: Internal Server Error - Unexpected error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong"
  */
+
 router.patch("/update-password", (req, res) =>
   authController.handleRequest(req, res, "auth", "/update-password")
 );
