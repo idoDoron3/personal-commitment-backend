@@ -1,6 +1,7 @@
 # Personal Commitment Backend
 
-This repository hosts the backend of the **Personal Commitment Application**, designed to facilitate matching between students as tutors and mentees. The backend currently supports user authentication and authorization.
+This repository hosts the backend of the **Personal Commitment Application**, designed to facilitate matching between students as tutors and mentees. The backend currently supports user authentication and authorization. The frontend of this project is in the following link: [Student-Tutor Matching Frontend](https://github.com/IttaySegal/student-tutor-matching-frontend)
+
 
 ---
 
