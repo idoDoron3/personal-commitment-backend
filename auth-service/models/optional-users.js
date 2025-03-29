@@ -1,30 +1,14 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db");
+const mongoose = require('mongoose');
 
-const Optional_users = sequelize.define("Optional_users", {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  first_name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  last_name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  email: {
-    type: DataTypes.STRING,
-    unique: true,
-    allowNull: false,
-  },
-  role: {
-    type: DataTypes.ENUM("student", "mentor", "admin"),
-    allowNull: false,
-    defaultValue: "student",
-  },
+const OptionalUserSchema = new mongoose.Schema({
+  first_name: { type: String, required: true },
+  last_name:  { type: String, required: true },
+  email:      { type: String, required: true, unique: true },
+  role:       { type: String, enum: ['student', 'mentor', 'admin'], default: 'student' },
+  subjects:   {
+    type: [String],
+    default: undefined, 
+  }
 });
 
-module.exports = Optional_users;
+module.exports = mongoose.model('OptionalUser', OptionalUserSchema);
