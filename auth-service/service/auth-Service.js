@@ -222,3 +222,35 @@ exports.updatePasswordWithToken = async (tempToken, newPassword, confirmPassword
 
   return { message: "Password updated successfully" };
 };
+exports.addSubjectToMentor = async (email, subject) => {
+  const user = await User.findOne({ email });
+  if (!user || user.role !== "mentor") throw new Error("Mentor not found");
+  if (!user.subjects.includes(subject)) user.subjects.push(subject);
+  await user.save();
+  return user;
+};
+
+exports.removeSubjectFromMentor = async (email, subject) => {
+  const user = await User.findOne({ email });
+  if (!user || user.role !== "mentor") throw new Error("Mentor not found");
+  user.subjects = user.subjects.filter((s) => s !== subject);
+  await user.save();
+  return user;
+};
+
+//admin - add to optinal
+exports.addUser = async (data) => {
+  const optionalUser = await OptionalUser.findOne({ email: data.email });
+  if (optionalUser) {
+    throw new Error("This email is already in useby optinal");
+  }  const user = new User(data);
+  await user.save();
+  return user;
+};
+//delete from users and optianl
+exports.deleteUser = async (email) => {
+  const deleted = await User.findOneAndDelete({ email });
+  const deleted_optinal= await OptionalUser.findOneAndDelete({ email });
+  if (!deleted || !deleted_optinal) throw new Error("User not found");
+  return deleted;
+};

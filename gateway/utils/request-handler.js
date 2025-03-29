@@ -18,6 +18,13 @@ const publicRoutes = new Set([
   "/logout",
 ]);
 
+const adminOnlyRoutes = new Set([
+  "/admin/add-subject",
+  "/admin/remove-subject",
+  "/admin/add-user",
+  "/admin/delete-user"
+]);
+
 const routesRequiringCookies = new Set(["/login", "/refresh"]);
 
 // Forwards HTTP requests to the appropriate microservice
@@ -41,6 +48,18 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
 
       if (!token) {
         return res.status(401).json({ error: "Token not found" });
+      }
+
+       // 🛡️ בדיקה האם מדובר בנתיב אדמין
+       if (adminOnlyRoutes.has(endpoint)) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          if (decoded.role !== "admin") {
+            return res.status(403).json({ error: "Access denied. Admins only." });
+          }
+        } catch (err) {
+          return res.status(403).json({ error: "Invalid or expired token" });
+        }
       }
       headers["Authorization"] = `Bearer ${token}`;
     }

@@ -16,4 +16,12 @@ router.post("/forgot-password", authController.forgotPassword);
 
 router.post("/refresh", authController.refreshToken);
 
+router.post("/admin/add-subject", authController.addSubject);
+
+router.post("/admin/remove-subject", authController.removeSubject);
+
+router.post("/admin/add-user", authController.addUser);
+
+router.delete("/admin/delete-user", authController.deleteUser);
+
 module.exports = router;

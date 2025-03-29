@@ -138,3 +138,41 @@ exports.logout = async (req, res) => {
     res.status(500).json({ error: "Logout failed" });
   }
 };
+exports.addSubject = async (req, res) => {
+  try {
+    const { email, subject } = req.body;
+    const updatedUser = await authService.addSubjectToMentor(email, subject);
+    res.status(200).json(updatedUser);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.removeSubject = async (req, res) => {
+  try {
+    const { email, subject } = req.body;
+    const updatedUser = await authService.removeSubjectFromMentor(email, subject);
+    res.status(200).json(updatedUser);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.addUser = async (req, res) => {
+  try {
+    const user = await authService.addUser(req.body);
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const deleted = await authService.deleteUser(email);
+    res.status(200).json({ message: "User deleted", deleted });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};

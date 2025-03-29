@@ -475,4 +475,21 @@ router.post("/forgot-password", (req, res) =>
   authController.handleRequest(req, res, "auth", "/forgot-password")
 );
 
+// Admin-only routes forwarding to auth service
+router.post("/admin/add-subject", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/add-subject")
+);
+
+router.post("/admin/remove-subject", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/remove-subject")
+);
+
+router.post("/admin/add-user", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/add-user")
+);
+
+router.delete("/admin/delete-user", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/delete-user")
+);
+
 module.exports = router;
