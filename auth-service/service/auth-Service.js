@@ -231,6 +231,7 @@ exports.updatePasswordWithToken = async (
 
   return { message: "Password updated successfully" };
 };
+
 exports.addSubjectToMentor = async (email, subject) => {
   const user = await User.findOne({ email });
   if (!user || user.role !== "mentor") throw new Error("Mentor not found");
@@ -248,14 +249,6 @@ exports.removeSubjectFromMentor = async (email, subject) => {
 };
 
 //admin - add to optinal
-// exports.addUser = async (data) => {
-//   const optionalUser = await OptionalUser.findOne({ email: data.email });
-//   if (optionalUser) {
-//     throw new Error("This email is already in useby optinal");
-//   }  const user = new User(data);
-//   await user.save();
-//   return user;
-// };
 exports.addUser = async (data) => {
   const existingOptional = await OptionalUser.findOne({ email: data.email });
 
