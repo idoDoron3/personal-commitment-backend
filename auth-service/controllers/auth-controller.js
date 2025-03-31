@@ -100,7 +100,7 @@ exports.login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ accessToken, user });
+    res.status(200).json({ accessToken,refreshToken, user });
   } catch (error) {
     console.error("Error in login function:", error.message);
     res.status(401).json({ error: "Invalid email or password" });
