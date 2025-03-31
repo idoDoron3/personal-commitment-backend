@@ -476,11 +476,11 @@ router.post("/forgot-password", (req, res) =>
 );
 
 // Admin-only routes forwarding to auth service
-router.post("/admin/add-subject", authenticateToken, (req, res) =>
+router.patch("/admin/add-subject", authenticateToken, (req, res) =>
   authController.handleRequest(req, res, "auth", "/admin/add-subject")
 );
 
-router.post("/admin/remove-subject", authenticateToken, (req, res) =>
+router.patch("/admin/remove-subject", authenticateToken, (req, res) =>
   authController.handleRequest(req, res, "auth", "/admin/remove-subject")
 );
 
