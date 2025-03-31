@@ -1,4 +1,3 @@
-
 const User = require("../models/User");
 const OptionalUser = require("../models/optional-users");
 const RefreshToken = require("../models/RefreshToken");
@@ -30,10 +29,10 @@ exports.registerUser = async (first_name, last_name, email, password) => {
     last_name,
     email,
     password: hashPassword,
-    role: optionalUser.role
+    role: optionalUser.role,
   };
 
-  if (optionalUser.role === 'mentor') {
+  if (optionalUser.role === "mentor") {
     userData.subjects = optionalUser.subjects || [];
   }
 
@@ -62,7 +61,9 @@ exports.loginUser = async (email, password) => {
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );
 
-  const expiryDate = new Date(Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY));
+  const expiryDate = new Date(
+    Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
+  );
   const existingToken = await RefreshToken.findOne({ user_id: user._id });
 
   if (existingToken) {
@@ -111,7 +112,9 @@ exports.refreshAccessToken = async (req, res) => {
     );
 
     tokenRecord.token = newRefreshToken;
-    tokenRecord.expiry = new Date(Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY));
+    tokenRecord.expiry = new Date(
+      Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
+    );
     await tokenRecord.save();
 
     res.cookie("refreshToken", newRefreshToken, {
@@ -122,7 +125,6 @@ exports.refreshAccessToken = async (req, res) => {
     });
 
     return res.status(200).json({ accessToken: newAccessToken });
-
   } catch (error) {
     console.error("Error in refreshAccessToken:", error.message);
     return res.status(401).json({ error: error.message });
@@ -171,7 +173,10 @@ exports.verifyResetCodeAndIssueToken = async (email, resetCode) => {
   const user = await User.findOne({ email });
   if (!user) throw new Error("User not found");
 
-  const isCodeValid = await bcrypt.compare(resetCode.toString(), user.resetToken);
+  const isCodeValid = await bcrypt.compare(
+    resetCode.toString(),
+    user.resetToken
+  );
   if (!isCodeValid || user.resetTokenExpiry < Date.now()) {
     throw new Error("Invalid or expired reset code");
   }
@@ -186,7 +191,11 @@ exports.verifyResetCodeAndIssueToken = async (email, resetCode) => {
 };
 
 // Update password using token
-exports.updatePasswordWithToken = async (tempToken, newPassword, confirmPassword) => {
+exports.updatePasswordWithToken = async (
+  tempToken,
+  newPassword,
+  confirmPassword
+) => {
   if (!tempToken || !newPassword || !confirmPassword) {
     const error = new Error("All fields are required");
     error.type = "MISSING_FIELDS";
@@ -239,18 +248,37 @@ exports.removeSubjectFromMentor = async (email, subject) => {
 };
 
 //admin - add to optinal
+// exports.addUser = async (data) => {
+//   const optionalUser = await OptionalUser.findOne({ email: data.email });
+//   if (optionalUser) {
+//     throw new Error("This email is already in useby optinal");
+//   }  const user = new User(data);
+//   await user.save();
+//   return user;
+// };
 exports.addUser = async (data) => {
-  const optionalUser = await OptionalUser.findOne({ email: data.email });
-  if (optionalUser) {
-    throw new Error("This email is already in useby optinal");
-  }  const user = new User(data);
-  await user.save();
-  return user;
+  const existingOptional = await OptionalUser.findOne({ email: data.email });
+
+  if (existingOptional) {
+    throw new Error("This email is already in use by OptionalUser");
+  }
+
+  const optionalUser = new OptionalUser({
+    first_name: data.first_name,
+    last_name: data.last_name,
+    email: data.email,
+    role: data.role,
+    subjects: data.subjects || [],
+  });
+
+  await optionalUser.save();
+  return optionalUser;
 };
+
 //delete from users and optianl
 exports.deleteUser = async (email) => {
   const deleted = await User.findOneAndDelete({ email });
-  const deleted_optinal= await OptionalUser.findOneAndDelete({ email });
+  const deleted_optinal = await OptionalUser.findOneAndDelete({ email });
   if (!deleted || !deleted_optinal) throw new Error("User not found");
   return deleted;
 };
