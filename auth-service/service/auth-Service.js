@@ -277,8 +277,18 @@ exports.addUser = async (data) => {
 
 //delete from users and optianl
 exports.deleteUser = async (email) => {
-  const deleted = await User.findOneAndDelete({ email });
-  const deleted_optinal = await OptionalUser.findOneAndDelete({ email });
-  if (!deleted || !deleted_optinal) throw new Error("User not found");
-  return deleted;
+  const deletedUser = await User.findOneAndDelete({ email });
+  const deletedOptional = await OptionalUser.findOneAndDelete({ email });
+
+  if (!deletedUser && !deletedOptional) {
+    throw new Error("User not found in any collection");
+  }
+
+  return {
+    deletedFrom: [
+      deletedUser ? "User" : null,
+      deletedOptional ? "OptionalUser" : null,
+    ].filter(Boolean),
+    email,
+  };
 };
