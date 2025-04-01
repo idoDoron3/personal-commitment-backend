@@ -1,15 +1,18 @@
-require("dotenv").config(); // reload data from env file
-const { Sequelize } = require("sequelize");
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME, // db name
-  process.env.DB_USER, // user name
-  process.env.DB_PASSWORD, // password
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: "mysql",
+const connectDB = async () => {
+  try {
+    const uri = process.env.MONGO_URI;
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
   }
-);
+};
 
-module.exports = sequelize;
+module.exports = connectDB;
