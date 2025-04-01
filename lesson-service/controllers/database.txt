@@ -1,0 +1,39 @@
+
+
+
+//lessons  lessonId subjectName    level   tutorId   dateTime   status (enum)  summary
+
+//tutiersLessons lessonId   tutierId    presence(true\false)
+
+
+//tutors tutorId firstName lastName
+
+
+//tutiers tutierId firstName lastName
+
+
+//(different server)review subjectId tutorId tutierId rating
+
+
+
+//mongodb document:
+// lessonId
+
+// subjectName
+
+// level
+
+
+// Tutor:
+// {tutorId, firstName, lastName}
+
+
+// tutier:
+// {tutierId, firstName, lastName, presence(true\false)}
+
+// lessonStatus
+
+
+// summary
+
+// review
