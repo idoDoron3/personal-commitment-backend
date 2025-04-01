@@ -100,7 +100,8 @@ exports.login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ accessToken, user });
+    //res.status(200).json({ accessToken, user });
+    res.status(200).json({ user, accessToken, refreshToken });
   } catch (error) {
     console.error("Error in login function:", error.message);
     res.status(401).json({ error: "Invalid email or password" });
@@ -151,7 +152,10 @@ exports.addSubject = async (req, res) => {
 exports.removeSubject = async (req, res) => {
   try {
     const { email, subject } = req.body;
-    const updatedUser = await authService.removeSubjectFromMentor(email, subject);
+    const updatedUser = await authService.removeSubjectFromMentor(
+      email,
+      subject
+    );
     res.status(200).json(updatedUser);
   } catch (err) {
     res.status(400).json({ error: err.message });
