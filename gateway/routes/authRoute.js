@@ -668,4 +668,8 @@ router.delete("/admin/delete-user", authenticateToken, (req, res) =>
   authController.handleRequest(req, res, "auth", "/admin/delete-user")
 );
 
+//TODO - add to swagger
+
+
+
 module.exports = router;

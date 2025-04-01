@@ -1,5 +1,6 @@
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
+const { aggregateHomeData } = require("../aggregators/home-aggregator");
 
 // Service URLs and configuration
 const SERVICES = {
@@ -99,5 +100,16 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
     } else {
       res.status(500).json({ error: "Internal Server Error" });
     }
+  }
+};
+
+// 📦 Home Aggregation Endpoint
+exports.getHomeData = async (req, res) => {
+  try {
+    const result = await aggregateHomeData(req);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Home data aggregation error:", err);
+    res.status(500).json({ error: err.message || "Failed to get home data" });
   }
 };

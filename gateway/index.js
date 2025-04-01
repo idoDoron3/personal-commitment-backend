@@ -2,6 +2,8 @@ const express = require("express");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
+const aggregatorRoutes = require("./routes/aggregator-router");
+
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors"); // ייבוא CORS
@@ -36,6 +38,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/auth", authRoutes); // Route for auth service
+app.use("/home", aggregatorRoutes);
+
 
 // Example route
 app.get("/", (req, res) => {
