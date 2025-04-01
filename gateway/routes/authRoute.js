@@ -475,4 +475,197 @@ router.post("/forgot-password", (req, res) =>
   authController.handleRequest(req, res, "auth", "/forgot-password")
 );
 
+/**
+ * @swagger
+ * /admin/add-subject:
+ *   patch:
+ *     summary: Add subject to mentor (admin only)
+ *     description: Adds a subject to a mentor’s list of subjects if not already present.
+ *       Requires a valid JWT token with `admin` role.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - subject
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: mentor@example.com
+ *               subject:
+ *                 type: string
+ *                 example: היסטוריה
+ *     responses:
+ *       200:
+ *         description: Subject added to mentor
+ *       400:
+ *         description: Mentor not found or invalid input
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Access denied - admin only
+ */
+
+router.patch("/admin/add-subject", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/add-subject")
+);
+
+/**
+ * @swagger
+ * /admin/remove-subject:
+ *   patch:
+ *     summary: Remove subject from mentor (admin only)
+ *     description: Removes a subject from a mentor’s subject list if present.
+ *       Requires a valid JWT token with `admin` role.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - subject
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: mentor@example.com
+ *               subject:
+ *                 type: string
+ *                 example: היסטוריה
+ *     responses:
+ *       200:
+ *         description: Subject removed from mentor
+ *       400:
+ *         description: Mentor not found or invalid input
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Access denied - admin only
+ */
+router.patch("/admin/remove-subject", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/remove-subject")
+);
+
+/**
+ * @swagger
+ * /admin/add-user:
+ *   post:
+ *     summary: Add a new optional user (admin only)
+ *     description: Adds a user to the OptionalUsers collection so they can register later.
+ *       Requires a valid JWT token with `admin` role.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - first_name
+ *               - last_name
+ *               - email
+ *               - role
+ *             properties:
+ *               first_name:
+ *                 type: string
+ *                 example: רות
+ *               last_name:
+ *                 type: string
+ *                 example: כהן
+ *               email:
+ *                 type: string
+ *                 example: ruth@example.com
+ *               role:
+ *                 type: string
+ *                 enum: [mentor, trainee]
+ *               subjects:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["אנגלית", "מתמטיקה"]
+ *     responses:
+ *       201:
+ *         description: Optional user added successfully
+ *       400:
+ *         description: Email already exists or invalid input
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Access denied - admin only
+ */
+
+router.post("/admin/add-user", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/add-user")
+);
+
+/**
+ * @swagger
+ * /admin/delete-user:
+ *   delete:
+ *     summary: Delete user from both User and OptionalUser collections (admin only)
+ *     description: Deletes user by email from both collections.
+ *       Requires a valid JWT token with `admin` role.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: ruth@example.com
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User deleted
+ *                 deleted:
+ *                   type: object
+ *                   properties:
+ *                     deletedFrom:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["User", "OptionalUser"]
+ *                     email:
+ *                       type: string
+ *       400:
+ *         description: User not found
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Access denied - admin only
+ */
+router.delete("/admin/delete-user", authenticateToken, (req, res) =>
+  authController.handleRequest(req, res, "auth", "/admin/delete-user")
+);
+
 module.exports = router;

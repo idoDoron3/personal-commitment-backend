@@ -1,24 +1,9 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const mongoose = require('mongoose');
 
-const RefreshToken = sequelize.define('RefreshToken', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-    },
-    user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
-    token: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    expiry: {
-        type: DataTypes.DATE,
-        allowNull: false,
-    },
+const RefreshTokenSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  token:   { type: String, required: true },
+  expiry:  { type: Date, required: true },
 });
 
-module.exports = RefreshToken;
+module.exports = mongoose.model('RefreshToken', RefreshTokenSchema);
