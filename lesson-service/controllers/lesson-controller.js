@@ -1,4 +1,5 @@
 // lesson-service/controllers/lesson-controller.js
+// ? TODO: check if the use of the GET request is correct when using the body to send data instead of the URL
 
 const lessonService = require("../service/lesson-service");
 
@@ -41,32 +42,29 @@ exports.createLesson = async (req, res) => {
 
 /**
  * @desc   Abort a lesson (tutor only)
- * @route  PATCH /lessons/:lessonId/abort
+ * @route  PATCH /lessons/abort
  * @access Tutor
- * @param  lessonId in URL
- * @body   { tutorId } for authorization
+ * @body   { lessonId, tutorId } for authorization
  * @returns { message }
  */
 exports.abortLesson = async (req, res) => {
     try {
-        // Extract lessonId from URL and tutorId from request body
-      const { lessonId } = req.params;
-      const { tutorId } = req.body;
+      const { lessonId, tutorId } = req.body; // Extract lessonId and tutorId from request body for consistency
   
       // Abort lesson in DB
       const abortedLesson = await lessonService.abortLesson(lessonId, tutorId);
       // TODO: until the Integrate with notifiction microservice
-      // Get enrolled tutiers and notify them (simulate)
-    //   const tutierIds = await lessonService.getEnrolledTutiers(lessonId); 
+      // Get enrolled tutees and notify them (simulate)
+    //   const tuteeIds = await lessonService.getEnrolledtutees(lessonId); 
   
-      // Send message to each tutier (or send to notification service later)
-    //   tutierIds.forEach((tutierId) => {
-    //     console.log(`📨 Notify tutier ${tutierId}: Lesson ${lessonId} has been cancelled.`);
-        // TODO: Integrate with notification microservice
+    //   Send message to each tutee (or send to notification service later)
+    //   tuteeIds.forEach((tuteeId) => {
+    //     console.log(`📨 Notify tutee ${tuteeId}: Lesson ${lessonId} has been cancelled.`);
+    //     TODO: Integrate with notification microservice
     //   });
   
       res.status(200).json({
-        message: `Lesson ${lessonId} aborted successfully and all tutiers notified.`,
+        message: `Lesson ${lessonId} aborted successfully and all tutees notified.`,
       });
     } catch (error) {
       console.error("Error in abortLesson:", error.message);
@@ -83,14 +81,14 @@ exports.abortLesson = async (req, res) => {
 /**
  * @desc    Get all lessons by tutor
  * @route   GET /lessons/tutor/:tutorId
- * @param   tutorId
+ * @body   { tutorId } // Optional: for consistency
  * @returns { lessons[] }
  */
 exports.getLessonsByTutor = async (req, res) => {
   try {
-    // Extract tutorId from URL parameters
-    const { tutorId } = req.params;
-    // Call the service to get lessons by tutorId
+    // const { tutorId } = req.body; // Extract tutorId from request body for consistency with the full code
+    const { tutorId } = req.params; // Extract tutorId from request parameters - because this is a GET request this is the standard way
+
     const lessons = await lessonService.getLessonsByTutor(tutorId);
 
     res.status(200).json({ lessons });
@@ -107,20 +105,20 @@ exports.getLessonsByTutor = async (req, res) => {
 
 
 //
-// *TUTIER
+// *Tutee
 //
 
 /**
- * @desc    Enroll a tutier into a lesson
+ * @desc    Enroll a tutee into a lesson
  * @route   POST /lessons/enroll
- * @body    { lessonId, tutierId }
+ * @body    { lessonId, tuteeId }
  * @returns { message, result }
  */
 exports.enrollToLesson = async (req, res) => {
   try {
-    const { lessonId, tutierId } = req.body;
+    const { lessonId, tuteeId } = req.body;
 
-    const result = await lessonService.enrollToLesson(lessonId, tutierId);
+    const result = await lessonService.enrollToLesson(lessonId, tuteeId);
 
     res.status(200).json({ message: "Enrolled successfully", result });
   } catch (error) {
@@ -134,7 +132,7 @@ exports.enrollToLesson = async (req, res) => {
       return res.status(404).json({ error: error.message });
     }
 
-    if (error.type === "TUTIER_NOT_FOUND") {
+    if (error.type === "TUTEE_NOT_FOUND") {
       return res.status(404).json({ error: error.message });
     }
 
@@ -147,30 +145,28 @@ exports.enrollToLesson = async (req, res) => {
 };
 
 /**
- * @desc   Withdraw a tutier from a lesson
- * @route  DELETE /lessons/:lessonId/withdraw
- * @access Tutier
- * @param  lessonId in URL
- * @body   { tutierId }
+ * @desc   Withdraw a tutee from a lesson
+ * @route  DELETE /lessons/withdraw
+ * @access tutee
+ * @body   { lessonId, tuteeId }
  * @returns { message }
  */
 exports.withdrawFromLesson = async (req, res) => {
     try {
-        // Extract lessonId from URL and tutierId from request body
-      const { lessonId } = req.params;
-      const { tutierId } = req.body;
+        // Extract lessonId and tuteeId from request body
+      const { lessonId, tuteeId } = req.body;
   
-      const result = await lessonService.withdrawFromLesson(lessonId, tutierId);
+      const result = await lessonService.withdrawFromLesson(lessonId, tuteeId);
   
       res.status(200).json({
-        message: `Tutier ${tutierId} withdrawn from lesson ${lessonId}.`,
+        message: `tutee ${tuteeId} withdrawn from lesson ${lessonId}.`,
         result
       });
     } catch (error) {
       console.error("Error in withdrawFromLesson:", error.message);
   
       if (error.type === "NOT_ENROLLED") {
-        return res.status(404).json({ error: "Tutier is not enrolled in this lesson" });
+        return res.status(404).json({ error: "tutee is not enrolled in this lesson" });
       }
   
       if (error.type === "LESSON_NOT_FOUND") {
@@ -183,22 +179,24 @@ exports.withdrawFromLesson = async (req, res) => {
 
   
 /**
- * @desc    Get all lessons a tutier is enrolled in
- * @route   GET /lessons/tutier/:tutierId
- * @param   tutierId
+ * @desc    Get all lessons a tutee is enrolled in
+ * @route   GET /lessons/tutee/:tuteeId
+ * @param   tuteeId
  * @returns { lessons[] }
  */
-exports.getTutierLessons = async (req, res) => {
+exports.getTuteeLessons = async (req, res) => {
   try {
-    const { tutierId } = req.params;
 
-    const lessons = await lessonService.getLessonsByTutier(tutierId);
+    const { tuteeId } = req.params; // this is the standard way to extract parameters from the URL in a GET request
+    // const { tuteeId } = req.body; // Extract tuteeId from request body
+
+    const lessons = await lessonService.getLessonsByTutee(tuteeId);
 
     res.status(200).json({ lessons });
   } catch (error) {
     console.error("Error in getMyLessons:", error.message);
 
-    if (error.type === "TUTIER_NOT_FOUND") {
+    if (error.type === "TUTEE_NOT_FOUND") {
       return res.status(404).json({ error: error.message });
     }
 
@@ -207,14 +205,16 @@ exports.getTutierLessons = async (req, res) => {
 };
 
 /**
- * @desc    Get all available lessons for enrollment (Tutier)
+ * @desc    Get all available lessons for enrollment (tutee)
  * @route   GET /lessons/available
- * @body    { subjects: string[] }   // Optional: list of subjects to filter lessons
+ * @body    { subjects: string[] }   // tutee chooses subjects to filter lessons
  * @returns { lessons[] }
  */
 exports.getAvailableLessons = async (req, res) => {
     try {
-      const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
+      const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
+
+      // const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
       const lessons = await lessonService.getAvailableLessons(subjects);
       res.status(200).json({ lessons });
     } catch (error) {
