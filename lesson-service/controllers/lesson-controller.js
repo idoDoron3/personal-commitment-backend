@@ -1,6 +1,7 @@
 // lesson-service/controllers/lesson-controller.js
 // ? TODO: check if the use of the GET request is correct when using the body to send data instead of the URL
 
+<<<<<<< HEAD
 const lessonService = require("../service/lesson-service");
 
 //
@@ -107,6 +108,24 @@ exports.getLessonsByTutor = async (req, res) => {
 //
 // *Tutee
 //
+=======
+// TODO: create lesson
+/*
+ * date and time of lesson is legal (frontend)
+ * validate access token
+ * make sure the user can create the specific subject lesson (frontend)
+ * make sure the user has 3 lessons at most inside a week
+ * send to  service to create lesson
+*/
+
+
+// TODO: abort lesson
+/*
+ * validate access token
+ * send to service to abort lesson
+ * send to all TUTEE that enrolled to the lesson
+*/
+>>>>>>> lesson-service-database-orm-migrations
 
 /**
  * @desc    Enroll a tutee into a lesson
@@ -120,9 +139,13 @@ exports.enrollToLesson = async (req, res) => {
 
     const result = await lessonService.enrollToLesson(lessonId, tuteeId);
 
+<<<<<<< HEAD
     res.status(200).json({ message: "Enrolled successfully", result });
   } catch (error) {
     console.error("Error in enrollToLesson:", error.message);
+=======
+// !TUTEE
+>>>>>>> lesson-service-database-orm-migrations
 
     if (error.type === "ALREADY_ENROLLED") {
       return res.status(409).json({ error: error.message });

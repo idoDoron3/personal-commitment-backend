@@ -15,7 +15,7 @@
 */
 
 
-// !TUTIER
+// !TUTEE
 
 // TODO: enroll to lesson
 
