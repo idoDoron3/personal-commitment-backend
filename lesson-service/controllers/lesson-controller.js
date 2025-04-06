@@ -1,7 +1,6 @@
 // lesson-service/controllers/lesson-controller.js
 // ? TODO: check if the use of the GET request is correct when using the body to send data instead of the URL
 
-<<<<<<< HEAD
 const lessonService = require("../service/lesson-service");
 
 //
@@ -11,18 +10,18 @@ const lessonService = require("../service/lesson-service");
 /**
  * @desc    Create a new lesson (Tutor only)
  * @route   POST /lessons
- * @body    { subjectName, level, tutorId, dateTime }
+ * @body    { subjectName, level, tutorId, appointedDateTime }
  * @returns { message, lesson }
  */
 exports.createLesson = async (req, res) => {
   try {
-    const { subjectName, level, tutorId, dateTime } = req.body;
+    const { subjectName, level, tutorId, appointedDateTime } = req.body;
 
     const lesson = await lessonService.createLesson(
       subjectName,
       level,
       tutorId,
-      dateTime
+      appointedDateTime
     );
 
     res.status(201).json({ message: "Lesson created", lesson });
@@ -49,35 +48,35 @@ exports.createLesson = async (req, res) => {
  * @returns { message }
  */
 exports.abortLesson = async (req, res) => {
-    try {
-      const { lessonId, tutorId } = req.body; // Extract lessonId and tutorId from request body for consistency
-  
-      // Abort lesson in DB
-      const abortedLesson = await lessonService.abortLesson(lessonId, tutorId);
-      // TODO: until the Integrate with notifiction microservice
-      // Get enrolled tutees and notify them (simulate)
+  try {
+    const { lessonId, tutorId } = req.body; // Extract lessonId and tutorId from request body for consistency
+
+    // Abort lesson in DB
+    const abortedLesson = await lessonService.abortLesson(lessonId, tutorId);
+    // TODO: until the Integrate with notifiction microservice
+    // Get enrolled tutees and notify them (simulate)
     //   const tuteeIds = await lessonService.getEnrolledtutees(lessonId); 
-  
+
     //   Send message to each tutee (or send to notification service later)
     //   tuteeIds.forEach((tuteeId) => {
     //     console.log(`📨 Notify tutee ${tuteeId}: Lesson ${lessonId} has been cancelled.`);
     //     TODO: Integrate with notification microservice
     //   });
-  
-      res.status(200).json({
-        message: `Lesson ${lessonId} aborted successfully and all tutees notified.`,
-      });
-    } catch (error) {
-      console.error("Error in abortLesson:", error.message);
-  
-      if (error.type === "LESSON_NOT_FOUND") {
-        return res.status(404).json({ error: error.message });
-      }
-  
-      res.status(500).json({ error: "Something went wrong" });
+
+    res.status(200).json({
+      message: `Lesson ${lessonId} aborted successfully and all tutees notified.`,
+    });
+  } catch (error) {
+    console.error("Error in abortLesson:", error.message);
+
+    if (error.type === "LESSON_NOT_FOUND") {
+      return res.status(404).json({ error: error.message });
     }
-  };
-  
+
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
 
 /**
  * @desc    Get all lessons by tutor
@@ -108,24 +107,6 @@ exports.getLessonsByTutor = async (req, res) => {
 //
 // *Tutee
 //
-=======
-// TODO: create lesson
-/*
- * date and time of lesson is legal (frontend)
- * validate access token
- * make sure the user can create the specific subject lesson (frontend)
- * make sure the user has 3 lessons at most inside a week
- * send to  service to create lesson
-*/
-
-
-// TODO: abort lesson
-/*
- * validate access token
- * send to service to abort lesson
- * send to all TUTEE that enrolled to the lesson
-*/
->>>>>>> lesson-service-database-orm-migrations
 
 /**
  * @desc    Enroll a tutee into a lesson
@@ -139,13 +120,9 @@ exports.enrollToLesson = async (req, res) => {
 
     const result = await lessonService.enrollToLesson(lessonId, tuteeId);
 
-<<<<<<< HEAD
     res.status(200).json({ message: "Enrolled successfully", result });
   } catch (error) {
     console.error("Error in enrollToLesson:", error.message);
-=======
-// !TUTEE
->>>>>>> lesson-service-database-orm-migrations
 
     if (error.type === "ALREADY_ENROLLED") {
       return res.status(409).json({ error: error.message });
@@ -175,32 +152,32 @@ exports.enrollToLesson = async (req, res) => {
  * @returns { message }
  */
 exports.withdrawFromLesson = async (req, res) => {
-    try {
-        // Extract lessonId and tuteeId from request body
-      const { lessonId, tuteeId } = req.body;
-  
-      const result = await lessonService.withdrawFromLesson(lessonId, tuteeId);
-  
-      res.status(200).json({
-        message: `tutee ${tuteeId} withdrawn from lesson ${lessonId}.`,
-        result
-      });
-    } catch (error) {
-      console.error("Error in withdrawFromLesson:", error.message);
-  
-      if (error.type === "NOT_ENROLLED") {
-        return res.status(404).json({ error: "tutee is not enrolled in this lesson" });
-      }
-  
-      if (error.type === "LESSON_NOT_FOUND") {
-        return res.status(404).json({ error: error.message });
-      }
-  
-      res.status(500).json({ error: "Something went wrong" });
-    }
-  };
+  try {
+    // Extract lessonId and tuteeId from request body
+    const { lessonId, tuteeId } = req.body;
 
-  
+    const result = await lessonService.withdrawFromLesson(lessonId, tuteeId);
+
+    res.status(200).json({
+      message: `tutee ${tuteeId} withdrawn from lesson ${lessonId}.`,
+      result
+    });
+  } catch (error) {
+    console.error("Error in withdrawFromLesson:", error.message);
+
+    if (error.type === "NOT_ENROLLED") {
+      return res.status(404).json({ error: "tutee is not enrolled in this lesson" });
+    }
+
+    if (error.type === "LESSON_NOT_FOUND") {
+      return res.status(404).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+
 /**
  * @desc    Get all lessons a tutee is enrolled in
  * @route   GET /lessons/tutee/:tuteeId
@@ -234,15 +211,21 @@ exports.getTuteeLessons = async (req, res) => {
  * @returns { lessons[] }
  */
 exports.getAvailableLessons = async (req, res) => {
-    try {
-      const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
+  try {
+    const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
 
-      // const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
-      const lessons = await lessonService.getAvailableLessons(subjects);
-      res.status(200).json({ lessons });
-    } catch (error) {
-      console.error("Error in getAvailableLessons:", error.message);
-      res.status(500).json({ error: "Something went wrong" });
-    }
-  };
-  
+    // const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
+    const lessons = await lessonService.getAvailableLessons(subjects);
+    res.status(200).json({ lessons });
+  } catch (error) {
+    console.error("Error in getAvailableLessons:", error.message);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+
+// ! get My next Lessons tutoee
+// ! get My next Lessons tutor
+// ! get approved lessons tutor
+// ! get awaiting approval lessons tutor
+// ! get not approved lessons tutor - means the admin review the lesson and decided to not approve it 
