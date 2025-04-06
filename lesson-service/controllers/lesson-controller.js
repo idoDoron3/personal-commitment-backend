@@ -8,7 +8,7 @@
  * date and time of lesson is legal (frontend)
  * validate access token
  * make sure the user can create the specific subject lesson (frontend)
- * make sure the user has 3 lessons at most inside a week 
+ * make sure the user has 3 lessons at most inside a week
  * send to  service to create lesson
 */
 
@@ -17,7 +17,7 @@
 /*
  * validate access token
  * send to service to abort lesson
- * send to all TUTIER that enrolled to the lesson
+ * send to all TUTEE that enrolled to the lesson
 */
 
 // TODO: return all lessons of TUTOR (for the TUTOR himself)
@@ -28,7 +28,7 @@
 */
 
 
-// !TUTIER
+// !TUTEE
 
 // TODO: enroll to lesson
 
