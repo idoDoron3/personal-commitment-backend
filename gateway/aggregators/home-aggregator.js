@@ -66,48 +66,67 @@ exports.aggregateHomeData = async (req) => {
 
 //   throw new Error("Unsupported role");
 if (role === "mentor") {
-    return {
-      role,
-      lessonCount: 12,
-      nextLesson: {
-        date: "2025-04-01",
-        time: "16:00",
-        student: "יוסי כהן",
-        subject: "אנגלית – הכנה למבחן"
+  return {
+    role,
+    userName: "יוסי כהן", 
+    lessonCount: 12,
+    nextLesson: {
+      date: "2025-04-01",
+      day: "שלישי",
+      time: "16:00",
+      endTime: "17:00", 
+      student: "נועם לוי",
+      subject: "אנגלית",
+      grade: "י" 
+    },
+    feedbackStats: {
+      averageScore: 4.7,
+      totalFeedbacks: 15
+    }
+  };
+}
+
+if (role === "student") {
+  return {
+    role,
+    userName: "דניאל ישראלי", 
+    lastLesson: {
+      date: "2025-03-27",
+      day: "רביעי",
+      subject: "מתמטיקה",
+      grade: "ח",
+      mentor: "מתן כהן"
+    },
+    upcomingLesson: {
+      date: "2025-04-01",
+      day: "חמישי",
+      subject: "פיזיקה",
+      grade: "ט",
+      mentor: "עידו בן עמי"
+    }
+  };
+}
+
+if (role === "admin") {
+  return {
+    role,
+    userName: "מנהלת מערכת",
+    mentorAvgScore: 4.5,
+    pendingRequests: [
+      { 
+        type: "שיעור חדש",
+        user: "יוסי לוי",
+        requestId: "123"
       },
-      feedbackStats: {
-        averageScore: 4.7,
-        totalFeedbacks: 15
+      { 
+        type: "בקשת חונך", 
+        user: "נועה רוזן", 
+        requestId: "124"
       }
-    };
-  }
+    ]
+  };
+}
 
-  if (role === "student") {
-    return {
-      role,
-      lastLesson: {
-        date: "2025-03-27",
-        subject: "מתמטיקה – שיעור חזרה",
-        mentor: "מתן כהן"
-      },
-      upcomingLesson: {
-        date: "2025-04-01",
-        subject: "פיזיקה – תרגול לקראת בגרות",
-        mentor: "עידו בן עמי"
-      }
-    };
-  }
+throw new Error("Unsupported role");
 
-  if (role === "admin") {
-    return {
-      role,
-      mentorAvgScore: 4.5,
-      pendingRequests: [
-        { type: "שיעור חדש", user: "יוסי לוי" },
-        { type: "בקשת חונך", user: "נועה רוזן" }
-      ]
-    };
-  }
-
-  throw new Error("Unsupported role");
-};
+}

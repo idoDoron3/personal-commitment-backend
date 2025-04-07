@@ -10,12 +10,18 @@ const cors = require("cors"); // ייבוא CORS
 
 require("dotenv").config();
 
+// app.use(
+//   cors({
+//     origin: "http://localhost:3000", // כתובת הלקוח
+//     credentials: true, // מאפשר cookies
+//   })
+// );
 app.use(
   cors({
-    origin: "http://localhost:3000", // כתובת הלקוח
-    credentials: true, // מאפשר cookies
+    origin: "*",
   })
 );
+
 
 // Swagger setup
 const options = {
@@ -48,12 +54,15 @@ app.get("/", (req, res) => {
 
 // Start the gateway
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`API Gateway running on port ${PORT}`);
-  // console.log(
-  //   `Swagger documentation available at: http://132.73.210.155:${PORT}/api-docs`
-  // );
-  console.log(
-    `Swagger documentation available at: http://localhost:${PORT}/api-docs`
-  );
+// app.listen(PORT, () => {
+//   console.log(`API Gateway running on port ${PORT}`);
+//   // console.log(
+//   //   `Swagger documentation available at: http://132.73.210.155:${PORT}/api-docs`
+//   // );
+//   console.log(
+//     `Swagger documentation available at: http://localhost:${PORT}/api-docs`
+//   );
+// });
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Gateway listening on http://0.0.0.0:${PORT}`);
 });
