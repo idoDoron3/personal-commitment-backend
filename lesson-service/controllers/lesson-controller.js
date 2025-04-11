@@ -43,7 +43,7 @@ exports.cancelLesson = async (req, res, next) => {
       message: 'Lesson canceled successfully',
       data: {
         lesson: canceledLesson.lesson,
-        // affectedTutees: canceledLesson.affectedTutees //! need to notify the affected tutees
+        // affectedTutees: canceledLesson.affectedTutees //!Amit: need to notify the affected tutees
       }
     });
   } catch (err) {
