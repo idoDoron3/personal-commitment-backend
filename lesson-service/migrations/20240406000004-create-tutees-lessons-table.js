@@ -41,7 +41,9 @@ module.exports = {
             }
         });
 
-        // Add indexes for faster lookups
+        // Indexes improve query performance for:
+        // - lesson_id: Finding all tutees in a lesson
+        // - tutee_id: Finding all lessons for a tutee
         await queryInterface.addIndex('tutees_lessons', ['lesson_id']);
         await queryInterface.addIndex('tutees_lessons', ['tutee_id']);
     },

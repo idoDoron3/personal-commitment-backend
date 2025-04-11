@@ -32,7 +32,7 @@ module.exports = {
             }
         });
 
-        // Add index on user_id for faster lookups
+        // Index on user_id improves lookup performance for user-tutor associations
         await queryInterface.addIndex('tutors', ['user_id']);
     },
 

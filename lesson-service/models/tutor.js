@@ -39,10 +39,34 @@ module.exports = (sequelize) => {
             }
         }
 
-        // Instance method (unchanged)
-        getFullName() {
-            return `${this.first_name} ${this.last_name}`;
+        /**
+         * Static method to find a Tutor by their associated user ID.
+         * @param {string} userId - The user ID to search for.
+         * @returns {Promise<Tutor|null>} The found Tutor instance or null if not found.
+         * @throws {Error} Throws error if there's a database query issue.
+         */
+        static async findByUserId(userId) {
+            if (!userId) { // Optional: Add basic input validation
+                console.warn('Attempted to find tutor with null or empty userId.');
+                return null;
+            }
+            try {
+                // Use 'this.findOne' to find a single record
+                const tutor = await this.findOne({
+                    where: {
+                        user_id: userId // Specify the column and value to match
+                    }
+                    // You can add 'include' options here if you need associated data
+                    // include: [{ model: models.SomeAssociatedModel, as: 'associationAlias' }]
+                });
+                // findOne returns the instance if found, or null if not found
+                return tutor;
+            } catch (error) {
+                console.error(`Error finding tutor by user ID ${userId}:`, error);
+                throw error;
+            }
         }
+
 
         // Static associate method (unchanged definition location)
         static associate(models) {
@@ -50,7 +74,7 @@ module.exports = (sequelize) => {
                 foreignKey: 'tutor_id', // Column name in the Lesson table
                 as: 'lessons'
             });
-            // Add other associations here if neded
+            // Add other associations here if needed
             // e.g., Tutor.belongsTo(models.User, { foreignKey: 'user_id', targetKey: 'user_id_in_user_table' });
         }
     }
@@ -63,8 +87,8 @@ module.exports = (sequelize) => {
         },
         user_id: {
             type: DataTypes.STRING, // As requested
-            allowNull: false,       // Assuming a Tutor must be linked to a User
-            unique: true            // Assuming one User account corresponds to only one Tutor profile
+            allowNull: false,      // Assuming a Tutor must be linked to a User
+            unique: true           // Assuming one User account corresponds to only one Tutor profile
         },
         first_name: {
             type: DataTypes.STRING(50),

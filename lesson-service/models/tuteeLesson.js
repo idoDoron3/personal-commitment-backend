@@ -92,7 +92,7 @@ module.exports = (sequelize) => {
         }
     }, {
         sequelize,
-        modelName: 'TuteeLessson',
+        modelName: 'TuteeLesson',
         tableName: 'tutees_lessons', // Junction table name
         timestamps: true, // Keep track of creation/update times for the association record
         underscored: true,

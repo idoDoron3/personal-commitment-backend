@@ -4,15 +4,27 @@ const cookieParser = require("cookie-parser");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const lessonRoutes = require("./routes/lessonRoute");
+const { sequelize } = require('./models');
 
 require("dotenv").config(); // Load env variables from .env
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 3002; // Match pattern from auth-service
 
-// !DB connection setup
-// const connectDB = require("./config/db");
-// connectDB();
+// Database connection and sync
+async function initializeDatabase() {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection established successfully.');
+
+    // Sync models (in production, you might want to remove this)
+    await sequelize.sync({ force: false });
+    console.log('Models synchronized with database.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    process.exit(1); // Exit if we can't connect to database
+  }
+}
 
 // Middleware
 app.use(
@@ -53,8 +65,38 @@ app.get("/", (req, res) => {
 // Mount routes
 app.use("/lessons", lessonRoutes);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Lesson Service running on http://localhost:${PORT}`);
-  console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+// 🔥 Add this BELOW all routes
+app.use((err, req, res, next) => {
+  const status = err.statusCode || 500;
+  const message = err.message || 'Something went wrong';
+  const type = err.type || 'INTERNAL_SERVER_ERROR';
+
+  console.error('Handled Error:', err);
+
+  res.status(status).json({
+    success: false,
+    message,
+    type,
+    statusCode: status,
+  });
 });
+
+
+// Start server with database connection
+async function startServer() {
+  try {
+    // Initialize database first
+    await initializeDatabase();
+
+    // Then start the server
+    app.listen(PORT, () => {
+      console.log(`Lesson Service running on http://localhost:${PORT}`);
+      console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

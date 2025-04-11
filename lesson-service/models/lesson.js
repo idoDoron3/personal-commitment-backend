@@ -1,24 +1,21 @@
 // Added Op for time comparisons
 const { Model, DataTypes, ValidationError, Op } = require('sequelize');
-
+const { appError } = require('../utils/errors/appError');
 // Define constants for status values
 const LESSON_STATUS = {
     CREATED: 'created',
     COMPLETED: 'completed',
-    APPROVED: 'approved', // State set by admin after lesson is completed
-    NOTAPPROVED: 'notapproved', // State set by admin after lesson is completed / unattended
-    CANCELED: 'canceled', // State set by tutor/system before appointed time
-    UNATTENDED: 'unattended', // State set by tutor after appointed time
+    UNATTENDED: 'unattended',
+    APPROVED: 'approved',
+    NOTAPPROVED: 'notapproved',
+    CANCELED: 'canceled',
 };
-// Create an array of the status values for ENUM definition and validation
 const lessonStatusValues = Object.values(LESSON_STATUS);
 
-// Define global maximum tutee count per lesson
-const MAX_TUTEES_PER_LESSON = 2;
 
-// Define global limits for Tutors and Tutees
-const MAX_OPEN_LESSONS_PER_TUTOR = 2; // Limit for lessons in 'created' state & future appointedTime per tutor
-const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 2; // Limit for how many 'created' & future lessons a tutee can be signed up for
+const MAX_TUTEES_PER_LESSON = 2;
+const MAX_OPEN_LESSONS_PER_TUTOR = 2;
+const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 2;
 
 module.exports = (sequelize) => {
     class Lesson extends Model {
@@ -33,30 +30,6 @@ module.exports = (sequelize) => {
             this.hasMany(models.TuteeLesson, { foreignKey: 'lesson_id', as: 'attendanceRecords' });
         }
 
-        // Instance methods using status constants
-        isEditable() {
-            return this.status === LESSON_STATUS.CREATED;
-        }
-        canBeCanceled() {
-            return this.status === LESSON_STATUS.CREATED && this.appointedTime > new Date();
-        }
-        canBeApproved() { // Checks if status IS approved (final admin state)
-            return this.status === LESSON_STATUS.APPROVED;
-        }
-        isAwaitingAdminApproval() { // Checks if ready FOR admin approval
-            return [LESSON_STATUS.COMPLETED, LESSON_STATUS.UNATTENDED].includes(this.status);
-        }
-        async getTuteeCount(options = {}) {
-            try {
-                return await sequelize.models.TuteeLesson.count({
-                    where: { lesson_id: this.lessonId }, ...options
-                });
-            } catch (error) {
-                console.error(`Error getting tutee count for lesson ${this.lessonId}:`, error);
-                throw error;
-            }
-        }
-
         // Static method for Tutor to record lesson outcome
         static async recordOutcome(lessonId, tutorId, outcomeData) {
             const transaction = await sequelize.transaction();
@@ -65,7 +38,7 @@ module.exports = (sequelize) => {
                 if (!lesson) { throw new Error('Lesson not found'); }
                 if (lesson.tutorId !== tutorId) { throw new Error('Unauthorized: Only the assigned tutor can record the outcome.'); }
                 const now = new Date();
-                if (lesson.status !== LESSON_STATUS.CREATED || lesson.appointedTime > now) { throw new Error(`Cannot record outcome. Lesson status must be '${LESSON_STATUS.CREATED}' and appointed time must have passed. Current status: ${lesson.status}`); }
+                if (lesson.status !== LESSON_STATUS.CREATED || lesson.appointedDateTime > now) { throw new Error(`Cannot record outcome. Lesson status must be '${LESSON_STATUS.CREATED}' and appointed time must have passed. Current status: ${lesson.status}`); }
                 const { status: newStatus, summary, attendance } = outcomeData;
                 if (newStatus !== LESSON_STATUS.COMPLETED && newStatus !== LESSON_STATUS.UNATTENDED) { throw new ValidationError('Invalid outcome status provided.', [{ message: `Outcome status must be '${LESSON_STATUS.COMPLETED}' or '${LESSON_STATUS.UNATTENDED}'.`, path: 'status', value: newStatus }]); }
                 lesson.status = newStatus;
@@ -83,7 +56,6 @@ module.exports = (sequelize) => {
                 throw error;
             }
         }
-        // ! make sure to ADD the admin an option to address unattended lessons differently ? from completed lessons
         // Static method for Admin to approve lesson outcome
         static async lessonVerdict(lessonId, adminUserId, verdict) {
             const transaction = await sequelize.transaction();
@@ -111,36 +83,54 @@ module.exports = (sequelize) => {
             }
         }
 
-        // Static method for Tutor/System to cancel a lesson
-        static async cancelByTutor(lessonId, options = {}) {
+        // Static method for Tutor/System to cancel a lesson (in model layer)
+        static async cancelLesson(lessonId, options = {}) {
             const transaction = options.transaction || await sequelize.transaction();
             try {
+                // Find the lesson with lock to prevent race conditions
                 const lesson = await Lesson.findByPk(lessonId, {
                     transaction,
-                    lock: transaction.LOCK.UPDATE
+                    lock: transaction.LOCK.UPDATE,
+                    include: [{
+                        model: sequelize.models.TuteeLesson,
+                        as: 'attendanceRecords',
+                        attributes: ['tutee_id'] // Only need tutee_id for the deletion step
+                    }]
                 });
-                if (!lesson) { throw new Error('Lesson not found'); }
-                if (lesson.status !== LESSON_STATUS.CREATED) { throw new Error(`Lesson cannot be canceled in its current status: ${lesson.status}`); }
-                if (lesson.appointedTime <= new Date()) { throw new Error(`Cannot cancel a lesson whose appointed time has passed.`); }
+                if (!lesson) {
+                    throw new AppError('Lesson not found', 404, 'NOT_FOUND');
+                }
                 lesson.status = LESSON_STATUS.CANCELED;
                 await lesson.save({ transaction });
-                const deletedSignups = await sequelize.models.TuteeLesson.destroy({
+
+                // Get affected tutees before deleting their records
+                const affectedTutees = lesson.attendanceRecords.map(record => record.tutee_id);
+                // Remove associated signups (TuteeLesson records)
+                await sequelize.models.TuteeLesson.destroy({
                     where: { lesson_id: lessonId },
                     transaction
                 });
-                console.log(`Removed ${deletedSignups} sign-up(s) for canceled lesson ${lessonId}.`);
-                if (!options.transaction) { await transaction.commit(); }
-                console.log(`Lesson ${lessonId} canceled successfully.`);
-                return lesson;
+                // Commit the transaction if it was not passed in the options
+                if (!options.transaction) {
+                    await transaction.commit();
+                }
+                return {
+                    lesson,
+                    affectedTutees
+                };
             } catch (error) {
-                if (!options.transaction && transaction) { await transaction.rollback(); }
-                console.error(`Error canceling lesson ${lessonId}:`, error);
-                throw error;
+                // Rollback the transaction if something goes wrong
+                if (!options.transaction && transaction) {
+                    await transaction.rollback();
+                }
+                // Re-throw the error, ensuring it is formatted consistently
+                if (error instanceof AppError) {
+                    throw error; // Custom application error
+                }
+                // General DB error handling
+                throw new AppError('Database error while canceling lesson', 500, 'DB_ERROR', [{ originalError: error.message }]);
             }
         }
-
-        // Add this static method inside the Lesson class definition,
-        // alongside other static methods like recordOutcome, approveLesson, etc.
 
         static async getUpcomingLessonsByTutor(tutorId, options = {}) {
             // Validate input
@@ -157,12 +147,16 @@ module.exports = (sequelize) => {
                         tutorId: tutorId,
                         // Focus on lessons that are still scheduled and haven't reached a terminal state
                         status: LESSON_STATUS.CREATED,
-                        appointedTime: {
+                        appointedDateTime: {
                             [Op.gte]: now // Appointed time is now or in the future
                         }
                     },
+                    attributes: [
+                        'lessonId', 'subjectName', 'level', 'tutorId',
+                        'appointedDateTime', 'status', 'summary', 'locationOrLink'
+                    ],
                     order: [
-                        ['appointedTime', 'ASC'] // Order by the soonest lesson first
+                        ['appointedDateTime', 'ASC'] // Order by the soonest lesson first
                     ],
                     transaction // Pass transaction if provided
                 };
@@ -191,7 +185,7 @@ module.exports = (sequelize) => {
             }
         }
 
-        static async countLessonsByStatusType(tutorId, countType, options = {}) {
+        static async countLessonsForTutorByStatusType(tutorId, countType, options = {}) {
             if (!tutorId || typeof tutorId !== 'number' || !Number.isInteger(tutorId)) {
                 throw new Error('Invalid or missing tutorId provided. Must be an integer.');
             }
@@ -254,10 +248,14 @@ module.exports = (sequelize) => {
                     // 1. Define conditions for the Lesson itself
                     where: {
                         status: LESSON_STATUS.CREATED, // Only lessons that haven't started/finished/canceled
-                        appointedTime: {
+                        appointedDateTime: {
                             [Op.gte]: now // Appointed time is now or in the future
                         }
                     },
+                    attributes: [
+                        'lessonId', 'subjectName', 'level', 'tutorId',
+                        'appointedDateTime', 'status', 'summary', 'locationOrLink'
+                    ],
                     // 2. Define how to link to the Tutee to filter
                     include: [
                         {
@@ -270,7 +268,7 @@ module.exports = (sequelize) => {
                         }
                     ],
                     order: [
-                        ['appointedTime', 'ASC'] // Show the soonest lessons first
+                        ['appointedDateTime', 'ASC'] // Show the soonest lessons first
                     ],
                     transaction // Pass transaction if provided
                 };
@@ -292,6 +290,34 @@ module.exports = (sequelize) => {
             } catch (error) {
                 console.error(`Error fetching upcoming lessons for tutee ${tuteeId}:`, error);
                 // Re-throw the error so the calling code can handle it
+                throw error;
+            }
+        }
+
+        // Static method to update location or link for a lesson
+        static async updateLocationOrLink(lessonId, tutorId, locationOrLink) {
+            const transaction = await sequelize.transaction();
+            try {
+                const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
+                if (!lesson) {
+                    throw new Error('Lesson not found');
+                }
+                if (lesson.tutorId !== tutorId) {
+                    throw new Error('Unauthorized: Only the assigned tutor can update the location or link.');
+                }
+                if (lesson.status !== LESSON_STATUS.CREATED) {
+                    throw new Error(`Cannot update location/link. Lesson status must be '${LESSON_STATUS.CREATED}'. Current status: ${lesson.status}`);
+                }
+
+                lesson.locationOrLink = locationOrLink;
+                await lesson.save({ transaction });
+                await transaction.commit();
+
+                console.log(`Location/link updated for lesson ${lessonId} by tutor ${tutorId}.`);
+                return lesson;
+            } catch (error) {
+                await transaction.rollback();
+                console.error(`Error updating location/link for lesson ${lessonId}:`, error);
                 throw error;
             }
         }
@@ -346,10 +372,10 @@ module.exports = (sequelize) => {
                 }
             }
         },
-        appointedTime: {
+        appointedDateTime: {
             type: DataTypes.DATE,
             allowNull: false,
-            field: 'appointed_time',
+            field: 'appointed_date_time',
             validate: {
                 isDate: {
                     msg: 'Appointed time must be a valid date.'
@@ -359,10 +385,21 @@ module.exports = (sequelize) => {
                         throw new ValidationError('Lesson date must be in the future', [{
                             message: 'Lesson date must be in the future',
                             type: 'Validation error',
-                            path: 'appointedTime',
+                            path: 'appointedDateTime',
                             value: value
                         }]);
                     }
+                }
+            }
+        },
+        locationOrLink: {
+            type: DataTypes.STRING(140),
+            allowNull: true,
+            field: 'location_or_link',
+            validate: {
+                len: {
+                    args: [0, 140],
+                    msg: 'Location or link must be between 0 and 140 characters.'
                 }
             }
         },
@@ -387,6 +424,7 @@ module.exports = (sequelize) => {
                 }
             }
         },
+
     }, { // Options object for Lesson.init
         sequelize,
         modelName: 'Lesson',
@@ -395,24 +433,79 @@ module.exports = (sequelize) => {
         underscored: true,
         indexes: [
             { fields: ['tutor_id'] },
-            { fields: ['appointed_time'] },
+            { fields: ['appointed_date_time'] },
             { fields: ['status'] }
         ]
     });
 
     // Hooks
-    Lesson.addHook('beforeCreate', 'validateTutorAndLimits', async (lesson, options) => {
-        const tutor = await sequelize.models.Tutor.findByPk(lesson.tutorId, { transaction: options.transaction });
-        if (!tutor) { throw new ValidationError('Tutor not found', [{ message: `Tutor with ID ${lesson.tutorId} not found.`, type: 'Validation error', path: 'tutorId', value: lesson.tutorId }]); }
-        const openLessonCount = await Lesson.count({ where: { tutorId: lesson.tutorId, status: LESSON_STATUS.CREATED, appointedTime: { [Op.gte]: new Date() } }, transaction: options.transaction });
-        if (openLessonCount >= MAX_OPEN_LESSONS_PER_TUTOR) { throw new ValidationError('Tutor open lesson limit reached', [{ message: `Tutor ${lesson.tutorId} has reached the maximum limit of ${MAX_OPEN_LESSONS_PER_TUTOR} open future lessons.`, type: 'Validation error', path: 'tutorId', value: lesson.tutorId }]); }
+    Lesson.addHook('beforeCreate', 'validateLessonLimits', async (lesson, options) => {
+        // Ensure the tutor doesn't exceed the open lesson limit
+        const openLessonCount = await Lesson.count({
+            where: {
+                tutorId: lesson.tutorId,
+                status: LESSON_STATUS.CREATED,
+                appointedDateTime: { [Op.gte]: new Date() },
+            },
+            transaction: options.transaction
+        });
+
+        if (openLessonCount >= MAX_OPEN_LESSONS_PER_TUTOR) {
+            const errorDetails = {
+                message: `Tutor ${lesson.tutorId} has reached the maximum limit of ${MAX_OPEN_LESSONS_PER_TUTOR} open future lessons.`,
+                type: 'ValidationError',
+                path: 'tutorId',
+                value: lesson.tutorId,
+            };
+
+            // Log the limit issue for monitoring purposes
+            console.warn(`Tutor ${lesson.tutorId} has reached the lesson limit (${openLessonCount}/${MAX_OPEN_LESSONS_PER_TUTOR})`);
+            throwValidationError('Tutor open lesson limit reached', errorDetails, 505);
+        }
     });
+
+
+    Lesson.addHook('beforeCreate', 'validateNoOverlappingLessons', async (lesson, options) => {
+        const { appointedDateTime, tutorId } = lesson;
+
+        // Define the time window (one hour before and after the appointed time)
+        const oneHourBefore = new Date(appointedDateTime.getTime() - 60 * 60 * 1000); // One hour before
+        const oneHourAfter = new Date(appointedDateTime.getTime() + 60 * 60 * 1000); // One hour after
+
+        // Check if there are any existing lessons within this one-hour window
+        const overlappingLessons = await Lesson.findAll({
+            where: {
+                tutorId,
+                appointedDateTime: {
+                    [Op.between]: [oneHourBefore, oneHourAfter],
+                },
+                status: LESSON_STATUS.CREATED,  // Make sure we're checking only "created" lessons, not completed ones
+            },
+            transaction: options.transaction
+        });
+
+        if (overlappingLessons.length > 0) {
+            const errorDetails = {
+                message: `Tutor ${tutorId} already has a lesson scheduled within one hour of the appointed time.`,
+                type: 'ValidationError',
+                path: 'appointedDateTime',
+                value: appointedDateTime,
+            };
+
+            // Log the overlapping lesson issue for monitoring purposes
+            console.warn(`Tutor ${tutorId} has overlapping lessons at ${appointedDateTime}`);
+
+            // Throw the validation error
+            throwValidationError('Tutor already has a lesson within the same time window.', errorDetails, 506);
+        }
+    });
+
 
     Lesson.addHook('beforeUpdate', 'preventInvalidUpdates', async (lesson, options) => {
         // Prevent status changes if lesson is in a terminal state for updates
         if (lesson.changed('status')) {
             const previousStatus = lesson.previous('status');
-            if (previousStatus === LESSON_STATUS.COMPLETED || previousStatus === LESSON_STATUS.APPROVED || previousStatus === LESSON_STATUS.CANCELED) {
+            if (previousStatus === LESSON_STATUS.APPROVED || previousStatus === LESSON_STATUS.NOTAPPROVED || previousStatus === LESSON_STATUS.CANCELED) {
                 throw new ValidationError(`Cannot modify a lesson with status: ${previousStatus}`, [{ message: `Cannot modify the status of a ${previousStatus} lesson.`, type: 'Validation error', path: 'status', value: lesson.status }]);
             }
         }
@@ -425,8 +518,8 @@ module.exports = (sequelize) => {
             const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
             if (!lesson) { throw new Error('Lesson not found'); }
             if (lesson.status !== LESSON_STATUS.CREATED) { throw new Error(`Lesson cannot be signed up for in status: ${lesson.status}`); }
-            if (lesson.appointedTime <= new Date()) { throw new Error(`Cannot sign up for a lesson whose time has passed.`); }
-            const signedUpCount = await sequelize.models.TuteeLesson.count({ where: { tutee_id: tuteeId }, include: [{ model: sequelize.models.Lesson, where: { status: LESSON_STATUS.CREATED, appointedTime: { [Op.gte]: new Date() } }, required: true }], transaction });
+            if (lesson.appointedDateTime <= new Date()) { throw new Error(`Cannot sign up for a lesson whose time has passed.`); }
+            const signedUpCount = await sequelize.models.TuteeLesson.count({ where: { tutee_id: tuteeId }, include: [{ model: sequelize.models.Lesson, where: { status: LESSON_STATUS.CREATED, appointedDateTime: { [Op.gte]: new Date() } }, required: true }], transaction });
             if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) { throw new Error(`Tutee ${tuteeId} has reached the maximum limit of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} active future lessons.`); }
             const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({ where: { lesson_id: lessonId }, transaction });
             if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) { throw new Error(`Lesson is full. Maximum capacity of ${MAX_TUTEES_PER_LESSON} reached.`); }
@@ -451,7 +544,7 @@ module.exports = (sequelize) => {
             const lesson = await Lesson.findByPk(lessonId, { transaction });
             if (!lesson) { throw new Error('Lesson not found'); }
             if (lesson.status !== LESSON_STATUS.CREATED) { throw new Error(`Lesson cancellation not allowed in status: ${lesson.status}`); }
-            if (lesson.appointedTime <= new Date()) { throw new Error(`Cannot cancel a lesson whose time has passed.`); }
+            if (lesson.appointedDateTime <= new Date()) { throw new Error(`Cannot cancel a lesson whose time has passed.`); }
             const signup = await sequelize.models.TuteeLesson.findOne({ where: { lesson_id: lessonId, tutee_id: tuteeId }, transaction });
             if (!signup) { throw new Error(`Tutee ${tuteeId} is not signed up for lesson ${lessonId}.`); }
             await signup.destroy({ transaction });
@@ -462,6 +555,12 @@ module.exports = (sequelize) => {
             console.error("Error handling tutee cancellation:", error);
             throw error;
         }
+    };
+
+    const throwValidationError = (message, errorDetails, statusCode) => {
+        const errorToThrow = new ValidationError(message, [errorDetails]);
+        errorToThrow.statusCode = statusCode;
+        throw errorToThrow;
     };
 
     return Lesson;

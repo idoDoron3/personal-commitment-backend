@@ -19,15 +19,15 @@ module.exports = {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
-            title: {
-                type: Sequelize.STRING(100),
+            subject_name: {
+                type: Sequelize.STRING(20),
                 allowNull: false
             },
-            description: {
-                type: Sequelize.TEXT,
-                allowNull: true
+            level: {
+                type: Sequelize.STRING(20),
+                allowNull: false
             },
-            appointed_time: {
+            appointed_date_time: {
                 type: Sequelize.DATE,
                 allowNull: false
             },
@@ -40,6 +40,10 @@ module.exports = {
                 type: Sequelize.TEXT,
                 allowNull: true
             },
+            location_or_link: {
+                type: Sequelize.STRING(140),
+                allowNull: true
+            },
             created_at: {
                 type: Sequelize.DATE,
                 allowNull: false
@@ -50,10 +54,13 @@ module.exports = {
             }
         });
 
-        // Add indexes for faster lookups
+        // Indexes improve query performance for common operations:
+        // - tutor_id: Finding lessons by tutor
+        // - status: Filtering lessons by status
+        // - appointed_date_time: Finding upcoming/past lessons
         await queryInterface.addIndex('lessons', ['tutor_id']);
         await queryInterface.addIndex('lessons', ['status']);
-        await queryInterface.addIndex('lessons', ['appointed_time']);
+        await queryInterface.addIndex('lessons', ['appointed_date_time']);
     },
 
     async down(queryInterface, Sequelize) {

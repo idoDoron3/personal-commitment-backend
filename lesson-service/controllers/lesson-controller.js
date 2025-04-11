@@ -9,97 +9,67 @@ const lessonService = require("../service/lesson-service");
 
 /**
  * @desc    Create a new lesson (Tutor only)
- * @route   POST /lessons
- * @body    { subjectName, level, tutorId, appointedDateTime }
- * @returns { message, lesson }
+ * @route   POST /lessons/create
+ * @access  Private (Tutor only)
  */
-exports.createLesson = async (req, res) => {
+// ? amit: can location or linke be null and edited later ? for now yea
+// ? amit: do we need to ask for the user email also for notification purposes ?
+exports.createLesson = async (req, res, next) => {
   try {
-    const { subjectName, level, tutorId, appointedDateTime } = req.body;
+    const lesson = await lessonService.createLesson(req.validatedBody);
 
-    const lesson = await lessonService.createLesson(
-      subjectName,
-      level,
-      tutorId,
-      appointedDateTime
-    );
-
-    res.status(201).json({ message: "Lesson created", lesson });
-  } catch (error) {
-    console.error("Error in createLesson:", error.message);
-
-    if (error.type === "TUTOR_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    if (error.type === "MISSING_FIELDS") {
-      return res.status(400).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
+    res.status(201).json({
+      success: true,
+      message: 'Lesson created successfully',
+      data: { lesson }
+    });
+  } catch (err) {
+    console.warn('createLesson controller error:', err);
+    next(err);
   }
 };
 
 /**
- * @desc   Abort a lesson (tutor only)
- * @route  PATCH /lessons/abort
- * @access Tutor
- * @body   { lessonId, tutorId } for authorization
- * @returns { message }
+ * @desc   Cancel a lesson (tutor only)
+ * @route  PATCH /lessons/cancel
+ * @access Private (Tutor only)
  */
-exports.abortLesson = async (req, res) => {
+exports.cancelLesson = async (req, res, next) => {
   try {
-    const { lessonId, tutorId } = req.body; // Extract lessonId and tutorId from request body for consistency
-
-    // Abort lesson in DB
-    const abortedLesson = await lessonService.abortLesson(lessonId, tutorId);
-    // TODO: until the Integrate with notifiction microservice
-    // Get enrolled tutees and notify them (simulate)
-    //   const tuteeIds = await lessonService.getEnrolledtutees(lessonId); 
-
-    //   Send message to each tutee (or send to notification service later)
-    //   tuteeIds.forEach((tuteeId) => {
-    //     console.log(`📨 Notify tutee ${tuteeId}: Lesson ${lessonId} has been cancelled.`);
-    //     TODO: Integrate with notification microservice
-    //   });
+    const canceledLesson = await lessonService.cancelLesson(req.validatedBody);
 
     res.status(200).json({
-      message: `Lesson ${lessonId} aborted successfully and all tutees notified.`,
+      success: true,
+      message: 'Lesson canceled successfully',
+      data: {
+        lesson: canceledLesson.lesson,
+        // affectedTutees: canceledLesson.affectedTutees //! need to notify the affected tutees
+      }
     });
-  } catch (error) {
-    console.error("Error in abortLesson:", error.message);
-
-    if (error.type === "LESSON_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
+  } catch (err) {
+    console.warn('cancelLesson controller error:', err);
+    next(err);
   }
 };
 
 
 /**
- * @desc    Get all lessons by tutor
- * @route   GET /lessons/tutor/:tutorId
- * @body   { tutorId } // Optional: for consistency
- * @returns { lessons[] }
+ * @desc    Get all lessons by tutor //! Amit: We Use POST instead of GET because get request can't send body
+ * @route   POST /lessons/tutor-upcoming-lessons
+ * @access  Private (Tutor only)
  */
-exports.getLessonsByTutor = async (req, res) => {
+exports.getLessonsByTutor = async (req, res, next) => {
   try {
-    // const { tutorId } = req.body; // Extract tutorId from request body for consistency with the full code
-    const { tutorId } = req.params; // Extract tutorId from request parameters - because this is a GET request this is the standard way
+    const lessons = await lessonService.getLessonsByTutor(req.validatedBody);
 
-    const lessons = await lessonService.getLessonsByTutor(tutorId);
-
-    res.status(200).json({ lessons });
-  } catch (error) {
-    console.error("Error in getLessonsByTutor:", error.message);
-
-    if (error.type === "TUTOR_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
+    res.status(200).json({
+      success: true,
+      message: 'Lessons retrieved successfully',
+      data: { lessons }
+    });
+  } catch (err) {
+    console.warn('getLessonsByTutor controller error:', err);
+    next(err);
   }
 };
 
