@@ -93,12 +93,12 @@ exports.login = async (req, res) => {
     );
 
     //Save refresh token in a cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // res.cookie("refreshToken", refreshToken, {
+    //   httpOnly: true,
+    //   secure: false,
+    //   sameSite: "None",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
 
     //res.status(200).json({ accessToken, user });
     res.status(200).json({ user, accessToken, refreshToken });
