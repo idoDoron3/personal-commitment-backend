@@ -164,17 +164,20 @@ router.post("/login", (req, res) =>
  * /refresh:
  *   post:
  *     summary: Refresh access token
- *     description: Refreshes the user's access token using a valid refresh token stored in a cookie.
+ *     description: Refreshes the user's access token using a valid refresh token sent in the body.
  *     tags:
  *       - Authentication
- *     parameters:
- *       - in: cookie
- *         name: refreshToken
- *         required: true
- *         description: The refresh token used to generate a new access token.
- *         schema:
- *           type: string
- *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: The refresh token used to generate a new access token.
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: Access token refreshed successfully
@@ -185,7 +188,9 @@ router.post("/login", (req, res) =>
  *               properties:
  *                 accessToken:
  *                   type: string
- *                   description: The new access token.
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 refreshToken:
+ *                   type: string
  *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       401:
  *         description: Refresh token not provided or invalid
@@ -208,6 +213,7 @@ router.post("/login", (req, res) =>
  *                   type: string
  *                   example: "Internal Server Error"
  */
+
 router.post("/refresh", (req, res) =>
   authController.handleRequest(req, res, "auth", "/refresh")
 );

@@ -83,14 +83,14 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
     });
 
     // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת
-    if (routesRequiringCookies.has(endpoint)) {
-      const cookies = response.headers["set-cookie"];
-      if (cookies) {
-        cookies.forEach((cookie) => {
-          res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
-        });
-      }
-    }
+    // if (routesRequiringCookies.has(endpoint)) {
+    //   const cookies = response.headers["set-cookie"];
+    //   if (cookies) {
+    //     cookies.forEach((cookie) => {
+    //       res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
+    //     });
+    //   }
+    // }
 
     // Return the response from the microservice
     res.status(response.status).json(response.data);

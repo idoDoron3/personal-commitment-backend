@@ -84,7 +84,7 @@ exports.loginUser = async (email, password) => {
 // Refreshes the access token
 exports.refreshAccessToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
+    const { refreshToken } = req.body;
     if (!refreshToken) {
       throw new Error("Refresh token not provided");
     }
@@ -117,15 +117,18 @@ exports.refreshAccessToken = async (req, res) => {
     );
     await tokenRecord.save();
 
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
-    });
+    // res.cookie("refreshToken", newRefreshToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "Strict",
+    //   maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
+    // });
 
-    return res.status(200).json({ accessToken: newAccessToken });
-  } catch (error) {
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+    } catch (error) {
     console.error("Error in refreshAccessToken:", error.message);
     return res.status(401).json({ error: error.message });
   }
