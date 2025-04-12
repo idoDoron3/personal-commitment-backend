@@ -106,7 +106,7 @@ exports.refreshAccessToken = async (req, res) => {
     );
 
     const newRefreshToken = jwt.sign(
-      { id: user._id },
+      { id: user._id, role: user.role },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
     );
@@ -116,6 +116,7 @@ exports.refreshAccessToken = async (req, res) => {
       Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
     );
     await tokenRecord.save();
+    console.log("✅ Refresh token updated in DB for user:", user._id);
 
     // res.cookie("refreshToken", newRefreshToken, {
     //   httpOnly: true,

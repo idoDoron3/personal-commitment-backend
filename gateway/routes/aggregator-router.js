@@ -3,6 +3,6 @@ const router = express.Router();
 const { authenticateToken } = require("../middleware/auth-middleware");
 const { getHomeData } = require("../controllers/aggregator-controller");
 
-router.get("/data", getHomeData);
+router.get("/data", authenticateToken, getHomeData);
 
 module.exports = router;
