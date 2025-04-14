@@ -154,7 +154,7 @@ exports.withdrawFromLesson = async (req, res) => {
  * @param   tuteeId
  * @returns { lessons[] }
  */
-exports.getTuteeLessons = async (req, res) => {
+exports.getLessonsByTutee = async (req, res) => {
   try {
 
     const { tuteeId } = req.params; // this is the standard way to extract parameters from the URL in a GET request
@@ -180,7 +180,7 @@ exports.getTuteeLessons = async (req, res) => {
  * @body    { subjects: string[] }   // tutee chooses subjects to filter lessons
  * @returns { lessons[] }
  */
-exports.getAvailableLessons = async (req, res) => {
+exports.getAvailableLessonsBySubject = async (req, res) => {
   try {
     const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
 
@@ -199,3 +199,44 @@ exports.getAvailableLessons = async (req, res) => {
 // ! get approved lessons tutor
 // ! get awaiting approval lessons tutor
 // ! get not approved lessons tutor - means the admin review the lesson and decided to not approve it 
+
+
+
+
+// ! Tutor:
+// ! 1 get by user id: Easy
+// ! 2 getLessonsByTutor -----------------------------------------------------------------------------(Created/Occured/???????): Hard 
+// ! 3 getAmountOfApprovedLessons (returns int): Medium
+//  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X 
+//  5 getPendingLessons - completed/unattended 
+// ! 6 createSummary -----------------------------------------------------------------------------,TutteesAtendncy, summary,: Hard
+// ! 7 addLinkOrLocationToLesson  : Easy
+
+
+// ! Tutee:
+// ! 8 get by user id: Easy
+// ! 9 getLessonsByTutee ----------------------------------------------------------------------------(upcoming/ ???): Hard
+// ! 10 getAvailableLessonsBySubject: Hard
+// ! 11 enrollToLesson: Medium
+// ! 12 withdrawFromLesson: Medium
+
+// 1, 8, 10 ,11 ,12 Itay
+// 2, 3, 6, 7, 9    Amit 
+
+
+
+
+// ! Admin: ------------------------------------------------------------- X 
+// ! getLessonsByStatus
+// ! approveLesson (think of bettter name)
+// ! getTotalCompletedLessons (returns int) ??  
+
+
+
+// ! Periodical functions:
+// ! changeStatusFromCreatedToCanceledByDate
+// ! Notifictations 
+
+
+
+
