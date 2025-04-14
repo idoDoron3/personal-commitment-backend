@@ -58,9 +58,11 @@ module.exports = {
         // - tutor_id: Finding lessons by tutor
         // - status: Filtering lessons by status
         // - appointed_date_time: Finding upcoming/past lessons
-        await queryInterface.addIndex('lessons', ['tutor_id']);
-        await queryInterface.addIndex('lessons', ['status']);
-        await queryInterface.addIndex('lessons', ['appointed_date_time']);
+        // ! Itay - not working due to double indexing in the original tables (because tutor_id is already indexed in the tutors table and status is already indexed in the lessons table
+        // ! and appointed_date_time is already indexed in the lessons table)
+        // await queryInterface.addIndex('lessons', ['tutor_id']);
+        // await queryInterface.addIndex('lessons', ['status']);
+        // await queryInterface.addIndex('lessons', ['appointed_date_time']);
     },
 
     async down(queryInterface, Sequelize) {

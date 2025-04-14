@@ -213,66 +213,13 @@ const getLessonsByTutee = async (tuteeId) => {
 };
 
 /**
- * Get all available lessons (with optional filters)
+ * Get all available lessons (with optional filters) for tutee
  * @param {Array<string>} subjects - Optional array of subjects to filter by
  * @returns {Promise<Array>} Array of available lessons
  */
 const getAvailableLessons = async (subjects) => {
-    try {
-        // Parse subjects if it's a string
-        let subjectArray = subjects;
-        if (typeof subjects === 'string') {
-            try {
-                subjectArray = JSON.parse(subjects);
-            } catch (e) {
-                // If it's not valid JSON, try to split by comma
-                subjectArray = subjects.split(',').map(s => s.trim());
-            }
-        }
-
-        // Build the query
-        const queryOptions = {
-            where: {
-                status: 'created', // Only show lessons that are still open
-                appointedTime: {
-                    [Op.gte]: new Date() // Only show future lessons
-                }
-            },
-            include: [
-                {
-                    model: Tutor,
-                    as: 'tutor',
-                    attributes: ['tutorId', 'firstName', 'lastName']
-                }
-            ],
-            order: [
-                ['appointedTime', 'ASC'] // Show the soonest lessons first
-            ]
-        };
-
-        // Add subject filter if provided
-        if (subjectArray && subjectArray.length > 0) {
-            queryOptions.where.subjectName = {
-                [Op.in]: subjectArray
-            };
-        }
-
-        // Get all available lessons
-        const lessons = await Lesson.findAll(queryOptions);
-        return lessons;
-    } catch (error) {
-        console.error('Error in getAvailableLessons service:', error);
-
-        if (error.type) {
-            throw error;
-        }
-
-        const serviceError = new Error('Failed to get available lessons');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
-    }
-};
+    return await Lesson.getAvailableLessonsBySubject(subjects);
+  };
 
 //* helper functions
 

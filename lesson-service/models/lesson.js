@@ -321,6 +321,45 @@ module.exports = (sequelize) => {
                 throw error;
             }
         }
+
+        static async getAvailableLessonsBySubject(subjects = [], options = {}) {
+            const now = new Date();
+          
+            const { transaction } = options;
+          
+            // Normalize subject filtering
+            const subjectFilter = Array.isArray(subjects) && subjects.length > 0
+              ? { subjectName: { [Op.in]: subjects } }
+              : {};
+          
+            try {
+              const lessons = await Lesson.findAll({
+                where: {
+                  status: LESSON_STATUS.CREATED,
+                  appointedDateTime: { [Op.gte]: now },
+                  ...subjectFilter,
+                },
+                include: [
+                  {
+                    model: sequelize.models.Tutor,
+                    as: 'tutor',
+                    attributes: ['tutorId', 'firstName', 'lastName']
+                  }
+                ],
+                attributes: [
+                  'lessonId', 'subjectName', 'level', 'appointedDateTime', 'locationOrLink'
+                ],
+                order: [['appointedDateTime', 'ASC']],
+                transaction
+              });
+          
+              return lessons;
+            } catch (error) {
+              console.error('Error in getAvailableLessonsBySubject:', error);
+              throw error;
+            }
+          }
+          
     } // End of Lesson class
 
     // --- CHANGE: Standardized indentation within Lesson.init ---

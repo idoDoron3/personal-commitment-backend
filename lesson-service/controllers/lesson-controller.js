@@ -182,8 +182,12 @@ exports.getLessonsByTutee = async (req, res) => {
  */
 exports.getAvailableLessonsBySubject = async (req, res) => {
   try {
-    const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
-
+    const rawSubjects = req.query.subjects;
+    const subjects = rawSubjects
+    ? Array.isArray(rawSubjects)
+    ? rawSubjects
+    : rawSubjects.split(',')
+  : [];
     // const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
     const lessons = await lessonService.getAvailableLessons(subjects);
     res.status(200).json({ lessons });
