@@ -2,6 +2,7 @@
 // ? TODO: check if the use of the GET request is correct when using the body to send data instead of the URL
 
 const lessonService = require("../service/lesson-service");
+const { Lesson, TuteeLesson } = require("../models");
 
 //
 // TUTOR
@@ -16,7 +17,13 @@ const lessonService = require("../service/lesson-service");
 // ? amit: do we need to ask for the user email also for notification purposes ?
 exports.createLesson = async (req, res, next) => {
   try {
-    const lesson = await lessonService.createLesson(req.validatedBody);
+    const tutorUserId = req.userId; // Now available from middleware
+    const tutorFullName = req.userFullName; // Now available from middleware
+    const lesson = await lessonService.createLesson({
+      ...req.validatedBody,
+      tutorUserId,
+      tutorFullName
+    });
 
     res.status(201).json({
       success: true,
@@ -129,3 +136,72 @@ exports.getLessonsByTutor = async (req, res, next) => {
 //? 1. by removing the tutors_table, ther are no option to keep tutor's score (if we dcide to implement it)
 //? 2. think about modfiying tutees table to have full_name instead of first_name and last_name
 //? 2.2 think about removing tutees table and use only tuteeLessons table with tuteeFullName column 
+
+//
+// TUTEE
+//
+
+/**
+ * @desc    Enroll a tutee in a lesson
+ * @route   POST /lessons/enroll
+ * @access  Private (Tutee only)
+ */
+exports.enrollToLesson = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const enrollment = await lessonService.enrollToLesson({
+      ...req.validatedBody,
+      tuteeId: userId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Enrolled in lesson successfully',
+      data: { enrollment }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Withdraw a tutee from a lesson
+ * @route   DELETE /lessons/withdraw
+ * @access  Private (Tutee only)
+ */
+exports.withdrawFromLesson = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const withdrawal = await lessonService.withdrawFromLesson({
+      ...req.validatedBody,
+      tuteeId: userId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Withdrawn from lesson successfully',
+      data: { withdrawal }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Get all available lessons
+ * @route   GET /lessons/available
+ * @access  Public
+ */
+exports.getAvailableLessons = async (req, res, next) => {
+  try {
+    const lessons = await lessonService.getAvailableLessons();
+
+    res.status(200).json({
+      success: true,
+      message: 'Available lessons retrieved successfully',
+      data: { lessons }
+    });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -51,26 +51,6 @@ const createLessonSchema = Joi.object({
             'any.required': 'Description is required'
         }),
 
-    // Tutor User ID validation
-    tutorUserId: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'Tutor user ID cannot be empty',
-            'any.required': 'Tutor user ID is required'
-        }),
-
-    // Tutor Full Name validation
-    tutorFullName: Joi.string()
-        .min(1)
-        .max(50)
-        .required()
-        .messages({
-            'string.empty': 'Tutor full name cannot be empty',
-            'string.min': 'Tutor full name must be at least {#limit} character long',
-            'string.max': 'Tutor full name cannot be longer than {#limit} characters',
-            'any.required': 'Tutor full name is required'
-        }),
-
     // Date/Time validation
     appointedDateTime: Joi.date()
         .iso()

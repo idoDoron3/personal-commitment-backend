@@ -100,7 +100,7 @@ module.exports = (sequelize) => {
                     }]
                 });
                 if (!lesson) {
-                    throw new AppError('Lesson not found', 404, 'NOT_FOUND');
+                    throw new appError('Lesson not found', 404, 'NOT_FOUND');
                 }
                 lesson.status = LESSON_STATUS.CANCELED;
                 await lesson.save({ transaction });
@@ -126,11 +126,11 @@ module.exports = (sequelize) => {
                     await transaction.rollback();
                 }
                 // Re-throw the error, ensuring it is formatted consistently
-                if (error instanceof AppError) {
+                if (error instanceof appError) {
                     throw error; // Custom application error
                 }
                 // General DB error handling
-                throw new AppError('Database error while canceling lesson', 500, 'DB_ERROR', [{ originalError: error.message }]);
+                throw new appError('Database error while canceling lesson', 500, 'DB_ERROR', [{ originalError: error.message }]);
             }
         }
 

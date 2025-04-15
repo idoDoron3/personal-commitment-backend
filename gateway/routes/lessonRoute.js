@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const gatewayController = require("../controllers/gateway-controller");
+const { authenticateToken } = require("../middleware/auth-middleware");
 
 /**
  * @swagger
@@ -44,7 +45,7 @@ const gatewayController = require("../controllers/gateway-controller");
  *       404:
  *         description: Tutor not found
  */
-router.post("/create", (req, res) =>
+router.post("/create", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/create")
 );
 
@@ -74,7 +75,7 @@ router.post("/create", (req, res) =>
  *       404:
  *         description: Lesson not found
  */
-router.patch("/abort", (req, res) =>
+router.patch("/abort", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/abort")
 );
 
@@ -96,7 +97,7 @@ router.patch("/abort", (req, res) =>
  *       404:
  *         description: Tutor not found
  */
-router.get("/tutor/:tutorId", (req, res) =>
+router.get("/tutor/:tutorId", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", `/tutor/${req.params.tutorId}`)
 );
 
@@ -130,7 +131,7 @@ router.get("/tutor/:tutorId", (req, res) =>
  *       403:
  *         description: Lesson full
  */
-router.post("/enroll", (req, res) =>
+router.post("/enroll", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/enroll")
 );
 
@@ -160,7 +161,7 @@ router.post("/enroll", (req, res) =>
  *       404:
  *         description: Not enrolled or lesson not found
  */
-router.delete("/withdraw", (req, res) =>
+router.delete("/withdraw", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/withdraw")
 );
 
@@ -182,7 +183,7 @@ router.delete("/withdraw", (req, res) =>
  *       404:
  *         description: Tutee not found
  */
-router.get("/tutee/:tuteeId", (req, res) =>
+router.get("/tutee/:tuteeId", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", `/tutee/${req.params.tuteeId}`)
 );
 
@@ -207,7 +208,7 @@ router.get("/tutee/:tuteeId", (req, res) =>
  *       200:
  *         description: List of available lessons
  */
-router.get("/available", (req, res) =>
+router.get("/available", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/available")
 );
 

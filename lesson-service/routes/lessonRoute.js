@@ -1,6 +1,8 @@
 const express = require("express");
 const lessonController = require("../controllers/lesson-controller");
 const validateBody = require('../middleware/validate-body');
+const validateRole = require('../middleware/validate-role');
+const { extractUserInfo } = require('../middleware/auth-middleware');
 const {
     createLessonSchema,
     enrollLessonSchema,
@@ -10,7 +12,6 @@ const {
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
 
-
 const router = express.Router();
 //
 // TUTOR ROUTES
@@ -19,6 +20,8 @@ const router = express.Router();
 // Create a new lesson
 router.post(
     "/create",
+    extractUserInfo,
+    validateRole('mentor'),
     validateBody(createLessonSchema),
     lessonController.createLesson
 );
@@ -26,6 +29,7 @@ router.post(
 // Abort a lesson
 router.patch(
     "/cancel",
+    extractUserInfo,
     validateBody(cancelLessonSchema),
     lessonController.cancelLesson
 );
@@ -34,6 +38,7 @@ router.patch(
 // ! we also need to ask for the tutorId to verify that it is the same tutor that is logged in
 router.post(
     "/tutor-upcoming-lessons",
+    extractUserInfo,
     validateBody(getLessonsByTutorSchema),
     lessonController.getLessonsByTutor
 );
@@ -43,10 +48,20 @@ router.post(
 //
 
 // Enroll in a lesson
-// router.post("/enroll", lessonController.enrollToLesson);
+router.post(
+    "/enroll",
+    extractUserInfo,
+    validateBody(enrollLessonSchema),
+    lessonController.enrollToLesson
+);
 
 // Withdraw from a lesson
-// router.delete("/withdraw", lessonController.withdrawFromLesson);
+router.delete(
+    "/withdraw",
+    extractUserInfo,
+    validateBody(withdrawLessonSchema),
+    lessonController.withdrawFromLesson
+);
 
 // Get all lessons a tutee is enrolled in
 // ? check if need to change the get request because of the body used to send data instead of the URL
@@ -54,6 +69,6 @@ router.post(
 
 // Get all available lessons (with optional query filter)
 // ? check if need to change the get request because of the body used to send data instead of the URL
-// router.get("/available", lessonController.getAvailableLessons);
+router.get("/available", lessonController.getAvailableLessons);
 
 module.exports = router;

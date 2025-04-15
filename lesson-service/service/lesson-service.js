@@ -1,5 +1,5 @@
 const { Lesson, Tutor } = require('../models');
-const { AppError } = require('../utils/errors/appError');
+const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
 
 /**
@@ -46,7 +46,7 @@ const createLesson = async (lessonData) => {
         return lesson;
     } catch (error) {
         if (error.type) { throw error; }
-        throw new AppError('Failed to create lesson', 500, 'CREATE_LESSON_ERROR', 'lesson-service:createLesson');
+        throw new appError('Failed to create lesson', 500, 'CREATE_LESSON_ERROR', 'lesson-service:createLesson');
     }
 };
 

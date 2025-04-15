@@ -5,6 +5,7 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const lessonRoutes = require("./routes/lessonRoute");
 const { sequelize } = require('./models');
+const { errorHandler } = require("./utils/errors/errorHandler");
 
 require("dotenv").config(); // Load env variables from .env
 
@@ -65,24 +66,8 @@ app.get("/", (req, res) => {
 // Mount routes
 app.use("/lessons", lessonRoutes);
 
-// 🔥 Add this BELOW all routes
-app.use((err, req, res, next) => {
-  const message = err.message || 'Something went wrong';
-  const origin = err.origin || 'Unknown';
-  const type = err.type || 'INTERNAL_SERVER_ERROR';
-  const status = err.statusCode || 500;
-
-  console.error('Handled Error:', err);
-
-  res.status(status).json({
-    success: false,
-    message,
-    statusCode: status,
-    type,
-    origin,
-  });
-});
-
+// Error handling middleware
+app.use(errorHandler);
 
 // Start server with database connection
 async function startServer() {

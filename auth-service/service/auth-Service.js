@@ -49,8 +49,9 @@ exports.loginUser = async (email, password) => {
     throw new Error("Invalid email or password");
   }
 
+  //! Amit: modified the payload to include fullName and email
   const accessToken = jwt.sign(
-    { id: user._id, role: user.role },
+    { id: user._id, role: user.role, fullName: user.first_name + ' ' + user.last_name, email: user.email },
     process.env.JWT_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
@@ -99,8 +100,9 @@ exports.refreshAccessToken = async (req, res) => {
     const user = await User.findById(tokenRecord.user_id);
     if (!user) throw new Error("User not found");
 
+    //! Amit: modified the payload to include fullName and email
     const newAccessToken = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, fullName: user.first_name + ' ' + user.last_name, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
     );
