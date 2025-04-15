@@ -18,13 +18,11 @@ module.exports = {
             tutee_user_id: {
                 type: Sequelize.STRING,
                 allowNull: false,
-                references: {
-                    model: 'tutees',
-                    key: 'tutee_user_id'
-                },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
                 primaryKey: true
+            },
+            tutee_full_name: {
+                type: Sequelize.STRING,
+                allowNull: false
             },
             presence: {
                 type: Sequelize.BOOLEAN,
@@ -40,12 +38,6 @@ module.exports = {
                 allowNull: false
             }
         });
-
-        // Indexes improve query performance for:
-        // - lesson_id: Finding all tutees in a lesson
-        // - tutee_user_id: Finding all lessons for a tutee
-        await queryInterface.addIndex('tutees_lessons', ['lesson_id']);
-        await queryInterface.addIndex('tutees_lessons', ['tutee_user_id']);
     },
 
     async down(queryInterface, Sequelize) {

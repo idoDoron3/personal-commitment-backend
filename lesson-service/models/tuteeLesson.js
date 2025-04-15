@@ -58,10 +58,6 @@ module.exports = (sequelize) => {
                 foreignKey: 'lesson_id',
                 as: 'lesson'
             });
-            TuteeLesson.belongsTo(models.Tutee, {
-                foreignKey: 'tutee_user_id',
-                as: 'tutee'
-            });
         }
     }
 
@@ -80,11 +76,12 @@ module.exports = (sequelize) => {
             type: DataTypes.STRING,
             allowNull: false,
             field: 'tutee_user_id',
-            references: {
-                model: 'tutees', // Table name of the Tutee model
-                key: 'tutee_user_id'   // Primary key column in tutees table
-            },
             primaryKey: true
+        },
+        tuteeFullName: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'tutee_full_name',
         },
         presence: {
             type: DataTypes.BOOLEAN,
@@ -100,7 +97,6 @@ module.exports = (sequelize) => {
         underscored: true,
         // Indexes help speed up queries involving these foreign keys
         indexes: [
-            { fields: ['lesson_id'] },
             { fields: ['tutee_user_id'] }
         ]
     });

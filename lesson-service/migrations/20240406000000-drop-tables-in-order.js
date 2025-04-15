@@ -9,7 +9,6 @@ module.exports = {
     async down(queryInterface, Sequelize) {
         // Drop tables in the correct order to respect foreign key constraints
         await queryInterface.dropTable('tutees_lessons');
-        await queryInterface.dropTable('tutees');
         await queryInterface.dropTable('lessons');
     }
 }; 
