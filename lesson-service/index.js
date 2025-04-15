@@ -67,17 +67,19 @@ app.use("/lessons", lessonRoutes);
 
 // 🔥 Add this BELOW all routes
 app.use((err, req, res, next) => {
-  const status = err.statusCode || 500;
   const message = err.message || 'Something went wrong';
+  const origin = err.origin || 'Unknown';
   const type = err.type || 'INTERNAL_SERVER_ERROR';
+  const status = err.statusCode || 500;
 
   console.error('Handled Error:', err);
 
   res.status(status).json({
     success: false,
     message,
-    type,
     statusCode: status,
+    type,
+    origin,
   });
 });
 

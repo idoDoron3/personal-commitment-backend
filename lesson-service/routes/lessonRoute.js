@@ -1,7 +1,6 @@
 const express = require("express");
 const lessonController = require("../controllers/lesson-controller");
 const validateBody = require('../middleware/validate-body');
-const validateQuery = require('../middleware/validate-query');
 const {
     createLessonSchema,
     enrollLessonSchema,
@@ -44,17 +43,17 @@ router.post(
 //
 
 // Enroll in a lesson
-router.post("/enroll", lessonController.enrollToLesson);
+// router.post("/enroll", lessonController.enrollToLesson);
 
 // Withdraw from a lesson
-router.delete("/withdraw", lessonController.withdrawFromLesson);
+// router.delete("/withdraw", lessonController.withdrawFromLesson);
 
 // Get all lessons a tutee is enrolled in
 // ? check if need to change the get request because of the body used to send data instead of the URL
-router.get("/tutee/:tuteeId", lessonController.getTuteeLessons);
+// router.get("/tutee/:tuteeId", lessonController.getTuteeLessons);
 
 // Get all available lessons (with optional query filter)
 // ? check if need to change the get request because of the body used to send data instead of the URL
-router.get("/available", lessonController.getAvailableLessons);
+// router.get("/available", lessonController.getAvailableLessons);
 
 module.exports = router;

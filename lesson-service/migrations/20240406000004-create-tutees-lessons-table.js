@@ -15,12 +15,12 @@ module.exports = {
                 onDelete: 'CASCADE',
                 primaryKey: true
             },
-            tutee_id: {
-                type: Sequelize.INTEGER,
+            tutee_user_id: {
+                type: Sequelize.STRING,
                 allowNull: false,
                 references: {
                     model: 'tutees',
-                    key: 'tutee_id'
+                    key: 'tutee_user_id'
                 },
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE',
@@ -43,9 +43,9 @@ module.exports = {
 
         // Indexes improve query performance for:
         // - lesson_id: Finding all tutees in a lesson
-        // - tutee_id: Finding all lessons for a tutee
+        // - tutee_user_id: Finding all lessons for a tutee
         await queryInterface.addIndex('tutees_lessons', ['lesson_id']);
-        await queryInterface.addIndex('tutees_lessons', ['tutee_id']);
+        await queryInterface.addIndex('tutees_lessons', ['tutee_user_id']);
     },
 
     async down(queryInterface, Sequelize) {

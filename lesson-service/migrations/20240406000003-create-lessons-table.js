@@ -9,22 +9,20 @@ module.exports = {
                 primaryKey: true,
                 autoIncrement: true
             },
-            tutor_id: {
-                type: Sequelize.INTEGER,
-                allowNull: false,
-                references: {
-                    model: 'tutors',
-                    key: 'tutor_id'
-                },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE'
-            },
             subject_name: {
                 type: Sequelize.STRING(20),
                 allowNull: false
             },
+            grade: {
+                type: Sequelize.STRING(10),
+                allowNull: false
+            },
             level: {
-                type: Sequelize.STRING(20),
+                type: Sequelize.STRING(10),
+                allowNull: false
+            },
+            description: {
+                type: Sequelize.STRING(100),
                 allowNull: false
             },
             appointed_date_time: {
@@ -36,9 +34,21 @@ module.exports = {
                 allowNull: false,
                 defaultValue: 'created'
             },
+            tutor_user_id: {
+                type: Sequelize.STRING,
+                allowNull: false
+            },
+            tutor_full_name: {
+                type: Sequelize.STRING(100),
+                allowNull: false
+            },
             summary: {
                 type: Sequelize.TEXT,
                 allowNull: true
+            },
+            format: {
+                type: Sequelize.ENUM('online', 'in-person'),
+                allowNull: false
             },
             location_or_link: {
                 type: Sequelize.STRING(140),
@@ -53,14 +63,6 @@ module.exports = {
                 allowNull: false
             }
         });
-
-        // Indexes improve query performance for common operations:
-        // - tutor_id: Finding lessons by tutor
-        // - status: Filtering lessons by status
-        // - appointed_date_time: Finding upcoming/past lessons
-        await queryInterface.addIndex('lessons', ['tutor_id']);
-        await queryInterface.addIndex('lessons', ['status']);
-        await queryInterface.addIndex('lessons', ['appointed_date_time']);
     },
 
     async down(queryInterface, Sequelize) {

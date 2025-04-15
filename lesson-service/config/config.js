@@ -8,11 +8,12 @@ module.exports = {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         dialect: 'mysql',
-        logging: console.log,
-        define: {
-            timestamps: true,
-            underscored: true
-        }
+        logging: false,
+        // logging: console.log,
+        // define: {
+        //     timestamps: true,
+        //     underscored: true
+        // }
     },
     test: {
         username: process.env.DB_USER,

@@ -4,14 +4,9 @@
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable('tutees', {
-            tutee_id: {
-                type: Sequelize.INTEGER,
-                primaryKey: true,
-                autoIncrement: true
-            },
-            user_id: {
+            tutee_user_id: {
                 type: Sequelize.STRING,
-                allowNull: false,
+                primaryKey: true,
                 unique: true
             },
             first_name: {
@@ -32,8 +27,6 @@ module.exports = {
             }
         });
 
-        // Index on user_id improves lookup performance for user-tutee associations
-        await queryInterface.addIndex('tutees', ['user_id']);
     },
 
     async down(queryInterface, Sequelize) {

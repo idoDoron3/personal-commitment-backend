@@ -24,7 +24,7 @@ exports.createLesson = async (req, res, next) => {
       data: { lesson }
     });
   } catch (err) {
-    console.warn('createLesson controller error:', err);
+    // console.warn('createLesson controller error:', err);
     next(err);
   }
 };
@@ -78,137 +78,22 @@ exports.getLessonsByTutor = async (req, res, next) => {
 // *Tutee
 //
 
-/**
- * @desc    Enroll a tutee into a lesson
- * @route   POST /lessons/enroll
- * @body    { lessonId, tuteeId }
- * @returns { message, result }
- */
-exports.enrollToLesson = async (req, res) => {
-  try {
-    const { lessonId, tuteeId } = req.body;
-
-    const result = await lessonService.enrollToLesson(lessonId, tuteeId);
-
-    res.status(200).json({ message: "Enrolled successfully", result });
-  } catch (error) {
-    console.error("Error in enrollToLesson:", error.message);
-
-    if (error.type === "ALREADY_ENROLLED") {
-      return res.status(409).json({ error: error.message });
-    }
-
-    if (error.type === "LESSON_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    if (error.type === "TUTEE_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    if (error.type === "LESSON_FULL") {
-      return res.status(403).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
-/**
- * @desc   Withdraw a tutee from a lesson
- * @route  DELETE /lessons/withdraw
- * @access tutee
- * @body   { lessonId, tuteeId }
- * @returns { message }
- */
-exports.withdrawFromLesson = async (req, res) => {
-  try {
-    // Extract lessonId and tuteeId from request body
-    const { lessonId, tuteeId } = req.body;
-
-    const result = await lessonService.withdrawFromLesson(lessonId, tuteeId);
-
-    res.status(200).json({
-      message: `tutee ${tuteeId} withdrawn from lesson ${lessonId}.`,
-      result
-    });
-  } catch (error) {
-    console.error("Error in withdrawFromLesson:", error.message);
-
-    if (error.type === "NOT_ENROLLED") {
-      return res.status(404).json({ error: "tutee is not enrolled in this lesson" });
-    }
-
-    if (error.type === "LESSON_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
-
-/**
- * @desc    Get all lessons a tutee is enrolled in
- * @route   GET /lessons/tutee/:tuteeId
- * @param   tuteeId
- * @returns { lessons[] }
- */
-exports.getLessonsByTutee = async (req, res) => {
-  try {
-
-    const { tuteeId } = req.params; // this is the standard way to extract parameters from the URL in a GET request
-    // const { tuteeId } = req.body; // Extract tuteeId from request body
-
-    const lessons = await lessonService.getLessonsByTutee(tuteeId);
-
-    res.status(200).json({ lessons });
-  } catch (error) {
-    console.error("Error in getMyLessons:", error.message);
-
-    if (error.type === "TUTEE_NOT_FOUND") {
-      return res.status(404).json({ error: error.message });
-    }
-
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
-/**
- * @desc    Get all available lessons for enrollment (tutee)
- * @route   GET /lessons/available
- * @body    { subjects: string[] }   // tutee chooses subjects to filter lessons
- * @returns { lessons[] }
- */
-exports.getAvailableLessonsBySubject = async (req, res) => {
-  try {
-    const { subjects } = req.query; // this is the standard way to extract query parameters from the URL in a GET request
-
-    // const { subjects } = req.body; // subjects can be undefined, an empty array, or a populated array
-    const lessons = await lessonService.getAvailableLessons(subjects);
-    res.status(200).json({ lessons });
-  } catch (error) {
-    console.error("Error in getAvailableLessons:", error.message);
-    res.status(500).json({ error: "Something went wrong" });
-  }
-};
-
 
 // ! get My next Lessons tutoee
 // ! get My next Lessons tutor
 // ! get approved lessons tutor
 // ! get awaiting approval lessons tutor
-// ! get not approved lessons tutor - means the admin review the lesson and decided to not approve it 
+// ! get not approved lessons tutor - means the admin review the lesson and decided to not approve it
 
 
 
 
 // ! Tutor:
 // ! 1 get by user id: Easy
-// ! 2 getLessonsByTutor -----------------------------------------------------------------------------(Created/Occured/???????): Hard 
+// ! 2 getLessonsByTutor -----------------------------------------------------------------------------(Created/Occured/???????): Hard
 // ! 3 getAmountOfApprovedLessons (returns int): Medium
-//  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X 
-//  5 getPendingLessons - completed/unattended 
+//  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X
+//  5 getPendingLessons - completed/unattended
 // ! 6 createSummary -----------------------------------------------------------------------------,TutteesAtendncy, summary,: Hard
 // ! 7 addLinkOrLocationToLesson  : Easy
 
@@ -221,22 +106,26 @@ exports.getAvailableLessonsBySubject = async (req, res) => {
 // ! 12 withdrawFromLesson: Medium
 
 // 1, 8, 10 ,11 ,12 Itay
-// 2, 3, 6, 7, 9    Amit 
+// 2, 3, 6, 7, 9    Amit
 
 
 
 
-// ! Admin: ------------------------------------------------------------- X 
+// ! Admin: ------------------------------------------------------------- X
 // ! getLessonsByStatus
 // ! approveLesson (think of bettter name)
-// ! getTotalCompletedLessons (returns int) ??  
+// ! getTotalCompletedLessons (returns int) ??
 
 
 
 // ! Periodical functions:
 // ! changeStatusFromCreatedToCanceledByDate
-// ! Notifictations 
+// ! Notifictations
 
 
 
 
+// TODO:
+//? 1. by removing the tutors_table, ther are no option to keep tutor's score (if we dcide to implement it)
+//? 2. think about modfiying tutees table to have full_name instead of first_name and last_name
+//? 2.2 think about removing tutees table and use only tuteeLessons table with tuteeFullName column 

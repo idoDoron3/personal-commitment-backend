@@ -15,10 +15,22 @@ const createLessonSchema = Joi.object({
             'any.required': 'Subject name is required'
         }),
 
+    // Grade validation
+    grade: Joi.string()
+        .min(1)
+        .max(10)
+        .required()
+        .messages({
+            'string.empty': 'Grade cannot be empty',
+            'string.min': 'Grade must be at least {#limit} character long',
+            'string.max': 'Grade cannot be longer than {#limit} characters',
+            'any.required': 'Grade is required'
+        }),
+
     // Level validation
     level: Joi.string()
         .min(1)
-        .max(20)
+        .max(10)
         .required()
         .messages({
             'string.empty': 'Level cannot be empty',
@@ -27,36 +39,36 @@ const createLessonSchema = Joi.object({
             'any.required': 'Level is required'
         }),
 
-    // User ID validation
-    userId: Joi.string()
+    // Description validation
+    description: Joi.string()
+        .min(1)
+        .max(100)
         .required()
         .messages({
-            'string.empty': 'User ID cannot be empty',
-            'any.required': 'User ID is required'
+            'string.empty': 'Description cannot be empty',
+            'string.min': 'Description must be at least {#limit} character long',
+            'string.max': 'Description cannot be longer than {#limit} characters',
+            'any.required': 'Description is required'
         }),
 
-    // First Name validation
-    userFirstName: Joi.string()
-        .min(1)
-        .max(20)
+    // Tutor User ID validation
+    tutorUserId: Joi.string()
         .required()
         .messages({
-            'string.empty': 'First name cannot be empty',
-            'string.min': 'First name must be at least {#limit} character long',
-            'string.max': 'First name cannot be longer than {#limit} characters',
-            'any.required': 'First name is required'
+            'string.empty': 'Tutor user ID cannot be empty',
+            'any.required': 'Tutor user ID is required'
         }),
 
-    // Last Name validation
-    userLastName: Joi.string()
+    // Tutor Full Name validation
+    tutorFullName: Joi.string()
         .min(1)
-        .max(20)
+        .max(50)
         .required()
         .messages({
-            'string.empty': 'Last name cannot be empty',
-            'string.min': 'Last name must be at least {#limit} character long',
-            'string.max': 'Last name cannot be longer than {#limit} characters',
-            'any.required': 'Last name is required'
+            'string.empty': 'Tutor full name cannot be empty',
+            'string.min': 'Tutor full name must be at least {#limit} character long',
+            'string.max': 'Tutor full name cannot be longer than {#limit} characters',
+            'any.required': 'Tutor full name is required'
         }),
 
     // Date/Time validation
@@ -69,6 +81,16 @@ const createLessonSchema = Joi.object({
             'date.format': 'Appointed date/time must be in ISO format',
             'date.min': 'Appointed date/time must be in the future',
             'any.required': 'Appointed date/time is required'
+        }),
+
+    // Format validation
+    format: Joi.string()
+        .valid('online', 'in-person')
+        .required()
+        .messages({
+            'string.empty': 'Format cannot be empty',
+            'any.only': 'Format must be either online or in-person',
+            'any.required': 'Format is required'
         }),
 
     // Location/Link validation (optional)
@@ -94,26 +116,16 @@ const cancelLessonSchema = Joi.object({
         }),
 
     // Tutor ID validation
-    tutorId: Joi.number()
-        .integer()
+    tutorUserId: Joi.string()
         .required()
         .messages({
-            'number.base': 'Tutor ID must be a number',
-            'number.integer': 'Tutor ID must be an integer',
-            'any.required': 'Tutor ID is required'
+            'string.empty': 'User ID cannot be empty',
+            'any.required': 'User ID is required'
         })
 });
 
 const getLessonsByTutorSchema = Joi.object({
-    tutorId: Joi.number()
-        .integer()
-        .required()
-        .messages({
-            'number.base': 'Tutor ID must be a number',
-            'number.integer': 'Tutor ID must be an integer',
-            'any.required': 'Tutor ID is required'
-        }),
-    userId: Joi.string()
+    tutorUserId: Joi.string()
         .required()
         .messages({
             'string.empty': 'User ID cannot be empty',
