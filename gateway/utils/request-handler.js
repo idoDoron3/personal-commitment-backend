@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const SERVICES = {
   auth: process.env.AUTH_SERVICE_URL,
   // Future services can be added here
-  // lesson: process.env.LESSON_SERVICE_URL || 'http://localhost:3002',
+  lesson: process.env.LESSON_SERVICE_URL,
 };
 
 // Set of public routes that do not require authentication

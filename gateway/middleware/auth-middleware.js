@@ -1,6 +1,6 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-
+console.log("JWT_SECRET", process.env.JWT_SECRET);
 /**
  * Middleware to authenticate access tokens from the Authorization header.
  * Verifies the token and attaches the decoded payload to the request object.

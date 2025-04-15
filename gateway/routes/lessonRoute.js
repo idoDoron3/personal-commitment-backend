@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const gatewayController = require("../controllers/gateway-controller");
+const { authenticateToken } = require("../middleware/auth-middleware");
 
 /**
  * @swagger
@@ -44,7 +45,8 @@ const gatewayController = require("../controllers/gateway-controller");
  *       404:
  *         description: Tutor not found
  */
-router.post("/create", (req, res) =>
+router.post("/create",authenticateToken, (req, res) =>
+  
   gatewayController.handleRequest(req, res, "lesson", "/create")
 );
 

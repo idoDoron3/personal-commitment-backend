@@ -343,7 +343,7 @@ module.exports = (sequelize) => {
                   {
                     model: sequelize.models.Tutor,
                     as: 'tutor',
-                    attributes: ['tutorId', 'firstName', 'lastName']
+                    attributes: ['tutor_id', 'first_name', 'last_name']
                   }
                 ],
                 attributes: [

@@ -2,6 +2,7 @@ const express = require("express");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
+const lessonRoutes = require("./routes/lessonRoute");
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors"); // ייבוא CORS
@@ -36,6 +37,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/auth", authRoutes); // Route for auth service
+app.use("/lessons", lessonRoutes); // Route for lesson service
 
 // Example route
 app.get("/", (req, res) => {
