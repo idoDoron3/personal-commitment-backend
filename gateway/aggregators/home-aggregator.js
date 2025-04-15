@@ -1,5 +1,21 @@
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
+const motivationSentences = [
+  "Every lesson is a step closer to your goals!",
+  "Keep pushing forward, you're doing great!",
+  "Your dedication to learning is inspiring!",
+  "Every challenge is an opportunity to grow!",
+  "Success is the sum of small efforts repeated daily!",
+  "You're not just learning, you're building your future!",
+  "Every lesson brings you closer to mastery!",
+  "Your progress is your power!",
+  "Learning is a journey, enjoy every step!",
+  "You're capable of amazing things!"
+];
+
+const getRandomMotivation = () => {
+  return motivationSentences[Math.floor(Math.random() * motivationSentences.length)];
+};
 
 const getUserFromToken = (req) => {
   const authHeader = req.headers.authorization;
@@ -18,115 +34,121 @@ const getUserFromToken = (req) => {
 exports.aggregateHomeData = async (req) => {
   const { id: userId, role } = getUserFromToken(req);
   const headers = { Authorization: req.headers.authorization };
-//   const lessons_base = process.env.LESSON_SERVICE_URL;//TODO - check if this the correct URL name
-//   const feedback_base = process.env.LESSON_SERVICE_URL;//TODO - check if this the correct URL name
-//   const notfiactions_base = process.env.LESSON_SERVICE_URL;//TODO - check if this the correct URL name
+  const lessons_base = process.env.LESSON_SERVICE_URL;
 
+  // Implementation for future reference:
+  /*
+  if (role === "mentor") {
+    // Get all mentor's lessons
+    const lessonsRes = await axios.get(`${lessons_base}/mentor/lessons/${userId}`, { headers });
+    const lessons = lessonsRes.data;
 
-//   if (role === "mentor") {
-//     const [countRes, nextRes, feedbackRes] = await Promise.all([
-//       axios.get(`${lessons_base}/mentor/lesson-count/${userId}`, { headers }),
-//       axios.get(`${lessons_base}/mentor/next-lesson/${userId}`, { headers }),
-//       axios.get(`${feedback_base}/mentor/avg-feedback/${userId}`, { headers })
-//     ]);
+    // Find next lesson
+    const now = new Date();
+    const nextLesson = lessons
+      .filter(lesson => new Date(lesson.date) > now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
-//     return {
-//       role,
-//       lessonCount: countRes.data.count,
-//       nextLesson: nextRes.data,
-//       feedbackStats: feedbackRes.data
-//     };
-//   }
+    // Calculate total hours
+    const totalHours = lessons.reduce((acc, lesson) => {
+      const duration = (new Date(lesson.endTime) - new Date(lesson.startTime)) / (1000 * 60 * 60);
+      return acc + duration;
+    }, 0);
 
-//   if (role === "student") {
-//     const [lastRes, nextRes] = await Promise.all([
-//       axios.get(`${lessons_base}/student/last-lesson/${userId}`, { headers }),
-//       axios.get(`${lessons_base}/student/next-lesson/${userId}`, { headers })
-//     ]);
-
-//     return {
-//       role,
-//       lastLesson: lastRes.data,
-//       upcomingLesson: nextRes.data
-//     };
-//   }
-
-//   if (role === "admin") {
-//     const [scoreRes, pendingRes] = await Promise.all([
-//       axios.get(`${feedback_base}/admin/mentor-avg-score`, { headers }),
-//       axios.get(`${notfiactions_base}/admin/pending-requests`, { headers })
-//     ]);
-
-//     return {
-//       role,
-//       mentorAvgScore: scoreRes.data,
-//       pendingRequests: pendingRes.data
-//     };
-//   }
-
-//   throw new Error("Unsupported role");
-if (role === "mentor") {
-  return {
-    role,
-    userName: "יוסי כהן", 
-    lessonCount: 12,
-    nextLesson: {
-      date: "2025-04-01",
-      day: "שלישי",
-      time: "16:00",
-      endTime: "17:00", 
-      student: "נועם לוי",
-      subject: "אנגלית",
-      grade: "י" 
-    },
-    feedbackStats: {
-      averageScore: 4.7,
-      totalFeedbacks: 15
-    }
-  };
-}
-
-if (role === "student") {
-  return {
-    role,
-    userName: "דניאל ישראלי", 
-    lastLesson: {
-      date: "2025-03-27",
-      day: "רביעי",
-      subject: "מתמטיקה",
-      grade: "ח",
-      mentor: "מתן כהן"
-    },
-    upcomingLesson: {
-      date: "2025-04-01",
-      day: "חמישי",
-      subject: "פיזיקה",
-      grade: "ט",
-      mentor: "עידו בן עמי"
-    }
-  };
-}
-
-if (role === "admin") {
-  return {
-    role,
-    userName: "מנהלת מערכת",
-    mentorAvgScore: 4.5,
-    pendingRequests: [
-      { 
-        type: "שיעור חדש",
-        user: "יוסי לוי",
-        requestId: "123"
-      },
-      { 
-        type: "בקשת חונך", 
-        user: "נועה רוזן", 
-        requestId: "124"
+    return {
+      role,
+      userName: "יוסי כהן",
+      totalHours: Math.round(totalHours),
+      nextLesson: nextLesson || null,
+      feedbackStats: {
+        averageScore: 4.7,
+        totalFeedbacks: 15
       }
-    ]
-  };
-}
+    };
+  }
 
-throw new Error("Unsupported role");
+  if (role === "student") {
+    // Get all student's lessons
+    const lessonsRes = await axios.get(`${lessons_base}/student/lessons/${userId}`, { headers });
+    const lessons = lessonsRes.data;
 
-}
+    // Find next lesson
+    const now = new Date();
+    const nextLesson = lessons
+      .filter(lesson => new Date(lesson.date) > now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+    return {
+      role,
+      userName: "דניאל ישראלי",
+      nextLesson: nextLesson || null,
+      motivationSentence: getRandomMotivation()
+    };
+  }
+  */
+
+  // Current mock implementation:
+  if (role === "mentor") {
+    return {
+      role,
+      userName: "MATAN COHEN", 
+      totalHours: 12,
+      nextLesson: {
+        date: "2025-04-01",
+        day: "Tuesday",
+        startTime: "16:00",
+        endTime: "17:00", 
+        student: "Naom levy",
+        subject: "English",
+        grade: "7",
+        description: "Advanced vocabulary and conversation practice",
+        location: "Zoom Meeting"
+      },
+      feedbackStats: {
+        averageScore: 4.7,
+        totalFeedbacks: 15
+      }
+    };
+  }
+
+  if (role === "student") {
+    return {
+      role,
+      userName: "NOA COHEN", 
+      nextLesson: {
+        date: "2025-04-01",
+        day: "Thursday",
+        startTime: "15:00",
+        endTime: "16:00",
+        subject: "Phisycs",
+        grade: "9",
+        mentor: "Ido Ben Ami",
+        description: "Mechanics and motion",
+        location: "Zoom Meeting"
+      },
+      motivationSentence: getRandomMotivation()
+    };
+  }
+
+  if (role === "admin") {
+    return {
+      role,
+      userName: "מנהלת מערכת",
+      mentorAvgScore: 4.5,
+      pendingRequests: [
+        { 
+          type: "שיעור חדש",
+          user: "יוסי לוי",
+          requestId: "123"
+        },
+        { 
+          type: "בקשת חונך", 
+          user: "נועה רוזן", 
+          requestId: "124"
+        }
+      ]
+    };
+  }
+
+  throw new Error("Unsupported role");
+};

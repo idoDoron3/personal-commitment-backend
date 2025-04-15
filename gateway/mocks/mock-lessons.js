@@ -5,10 +5,7 @@ const mockPrevLesson = {
   id: 4,
   subject: "Mathematics",
   grade: "8",
-  date: "1.4.2025",
-  day: "Thursday",
-  startTime: "11:00",
-  endTime: "12:00",
+  dateTime: "2025-04-01T11:00:00.000Z",  // ISO format
   mentor: "Galit Bar",
   description: "Review of function analysis",
   students: [
@@ -25,10 +22,7 @@ const mockNextLesson = {
   id: 5,
   subject: "Mathematics",
   grade: "8",
-  date: "6.4.2025",
-  day: "Friday",
-  startTime: "13:00",
-  endTime: "14:00",
+  dateTime: "2025-04-06T13:00:00.000Z",  // ISO format
   mentor: "Ido Caspi",
   description: "Practice quadratic equations",
   students: [
@@ -47,10 +41,7 @@ const mockSearchResults = [
     subject: "Mathematics",
     grade: "8",
     group: "2",
-    date: "2.4.2025",
-    day: "Sunday",
-    startTime: "14:00",
-    endTime: "15:00",
+    dateTime: "2025-04-02T14:00:00.000Z",  // ISO format
     mentor: "Yossi Cohen",
     description: "Test prep",
     students: [
@@ -67,10 +58,7 @@ const mockSearchResults = [
     subject: "Mathematics",
     grade: "8",
     group: "2",
-    date: "3.4.2025",
-    day: "Monday",
-    startTime: "15:00",
-    endTime: "16:00",
+    dateTime: "2025-04-03T15:00:00.000Z",  // ISO format
     mentor: "Noa Barak",
     description: "Final review",
     students: [
@@ -86,10 +74,7 @@ const mockSearchResults = [
     subject: "Mathematics",
     grade: "8",
     group: "2",
-    date: "4.4.2025",
-    day: "Tuesday",
-    startTime: "12:00",
-    endTime: "13:00",
+    dateTime: "2025-04-04T12:00:00.000Z",  // ISO format
     mentor: "Yoav Levi",
     description: "Practice lesson",
     students: [
