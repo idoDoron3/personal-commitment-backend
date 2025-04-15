@@ -290,33 +290,115 @@ module.exports = (sequelize) => {
             }
         }
 
-        // Static method to update location or link for a lesson
-        static async updateLocationOrLink(lessonId, tutorUserId, locationOrLink) {
-            const transaction = await sequelize.transaction();
+        /**
+         * Get all available lessons, optionally filtered by subject(s), including enrolled tutees
+         * @param {Array<string>} subjects - Optional list of subject names to filter
+         * @returns {Promise<Array>} Array of available lessons with tutees
+         */
+        static async getAvailableLessons(subjects = []) {
             try {
-                const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
-                if (!lesson) {
-                    throw new Error('Lesson not found');
+            const now = new Date();
+        
+            const queryOptions = {
+                where: {
+                status: LESSON_STATUS.CREATED,
+                appointedDateTime: {
+                    [Op.gte]: now
                 }
-                if (lesson.tutorUserId !== tutorUserId) {
-                    throw new Error('Unauthorized: Only the assigned tutor can update the location or link.');
+                },
+                order: [['appointedDateTime', 'ASC']],
+                include: [
+                {
+                    model: sequelize.models.TuteeLesson,
+                    as: 'attendanceRecords',
+                    attributes: ['tutee_user_id', 'tutee_full_name'] // only what's needed
                 }
-                if (lesson.status !== LESSON_STATUS.CREATED) {
-                    throw new Error(`Cannot update location/link. Lesson status must be '${LESSON_STATUS.CREATED}'. Current status: ${lesson.status}`);
-                }
-
-                lesson.locationOrLink = locationOrLink;
-                await lesson.save({ transaction });
-                await transaction.commit();
-
-                console.log(`Location/link updated for lesson ${lessonId} by tutor ${tutorUserId}.`);
-                return lesson;
+                ]
+            };
+        
+            if (subjects.length > 0) {
+                queryOptions.where.subjectName = { [Op.in]: subjects };
+            }
+        
+            const lessons = await this.findAll(queryOptions);
+            return lessons;
             } catch (error) {
-                await transaction.rollback();
-                console.error(`Error updating location/link for lesson ${lessonId}:`, error);
-                throw error;
+            console.error('Error in Lesson.getAvailableLessons:', error);
+            throw error;
             }
         }
+        
+        static async editLessonByTutor(lessonId, tutorUserId, updates) {
+            const transaction = await sequelize.transaction();
+            try {
+              const lesson = await Lesson.findByPk(lessonId, {
+                transaction,
+                lock: transaction.LOCK.UPDATE
+              });
+          
+              if (!lesson) {
+                throw new appError('Lesson not found', 404, 'NOT_FOUND');
+              }
+          
+              if (lesson.tutorUserId !== tutorUserId) {
+                throw new appError('Unauthorized: You are not the tutor of this lesson', 403, 'UNAUTHORIZED');
+              }
+          
+              if (lesson.status !== LESSON_STATUS.CREATED) {
+                throw new appError(`Cannot edit lesson in current status: ${lesson.status}`, 400, 'INVALID_STATUS');
+              }
+          
+              // Apply only non-null updates
+              if (updates.description !== null && updates.description !== undefined) {
+                lesson.description = updates.description;
+              }
+          
+              if (updates.format !== null && updates.format !== undefined) {
+                lesson.format = updates.format;
+              }
+          
+              if (updates.locationOrLink !== null && updates.locationOrLink !== undefined) {
+                lesson.locationOrLink = updates.locationOrLink;
+              }
+          
+              await lesson.save({ transaction });
+              await transaction.commit();
+          
+              return lesson;
+            } catch (error) {
+              await transaction.rollback();
+              console.error('Error updating lesson:', error);
+              throw error;
+            }
+          }
+          
+        // Static method to update location or link for a lesson
+        // static async updateLocationOrLink(lessonId, tutorUserId, locationOrLink) {
+        //     const transaction = await sequelize.transaction();
+        //     try {
+        //         const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
+        //         if (!lesson) {
+        //             throw new Error('Lesson not found');
+        //         }
+        //         if (lesson.tutorUserId !== tutorUserId) {
+        //             throw new Error('Unauthorized: Only the assigned tutor can update the location or link.');
+        //         }
+        //         if (lesson.status !== LESSON_STATUS.CREATED) {
+        //             throw new Error(`Cannot update location/link. Lesson status must be '${LESSON_STATUS.CREATED}'. Current status: ${lesson.status}`);
+        //         }
+
+        //         lesson.locationOrLink = locationOrLink;
+        //         await lesson.save({ transaction });
+        //         await transaction.commit();
+
+        //         console.log(`Location/link updated for lesson ${lessonId} by tutor ${tutorUserId}.`);
+        //         return lesson;
+        //     } catch (error) {
+        //         await transaction.rollback();
+        //         console.error(`Error updating location/link for lesson ${lessonId}:`, error);
+        //         throw error;
+        //     }
+        // }
     } // End of Lesson class
 
     // --- CHANGE: Standardized indentation within Lesson.init ---
@@ -541,14 +623,19 @@ module.exports = (sequelize) => {
         try {
             const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
             if (!lesson) { throw new Error('Lesson not found'); }
-            if (lesson.status !== LESSON_STATUS.CREATED) { throw new Error(`Lesson cannot be signed up for in status: ${lesson.status}`); }
-            if (lesson.appointedDateTime <= new Date()) { throw new Error(`Cannot sign up for a lesson whose time has passed.`); }
-
-            // Check if tutee has reached the maximum number of active lessons
+            if (lesson.status !== LESSON_STATUS.CREATED) {
+                throw new Error(`Lesson cannot be signed up for in status: ${lesson.status}`);
+            }
+            if (lesson.appointedDateTime <= new Date()) {
+                throw new Error(`Cannot sign up for a lesson whose time has passed.`);
+            }
+    
+            // Check tutee lesson count
             const signedUpCount = await sequelize.models.TuteeLesson.count({
                 where: { tutee_user_id: tuteeUserId },
                 include: [{
                     model: sequelize.models.Lesson,
+                    as: 'lesson',
                     where: {
                         status: LESSON_STATUS.CREATED,
                         appointedDateTime: { [Op.gte]: new Date() }
@@ -557,22 +644,22 @@ module.exports = (sequelize) => {
                 }],
                 transaction
             });
-
+    
             if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
                 throw new Error(`Tutee ${tuteeUserId} has reached the maximum limit of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} active future lessons.`);
             }
-
-            // Check if lesson has reached maximum capacity
+    
+            // Check lesson capacity
             const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
                 where: { lesson_id: lessonId },
                 transaction
             });
-
+    
             if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
                 throw new Error(`Lesson is full. Maximum capacity of ${MAX_TUTEES_PER_LESSON} reached.`);
             }
-
-            // Check if tutee is already signed up
+    
+            // Check if already enrolled
             const existingSignup = await sequelize.models.TuteeLesson.findOne({
                 where: {
                     lesson_id: lessonId,
@@ -580,27 +667,40 @@ module.exports = (sequelize) => {
                 },
                 transaction
             });
-
+    
             if (existingSignup) {
                 throw new Error(`Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}.`);
             }
-
-            // Create the new signup record
+    
+            // Create new enrollment
             await sequelize.models.TuteeLesson.create({
-                lesson_id: lessonId,
-                tutee_user_id: tuteeUserId,
-                tutee_full_name: tuteeFullName,
+                lessonId,
+                tuteeUserId,
+                tuteeFullName,
                 presence: false
             }, { transaction });
-
+    
             await transaction.commit();
-            return lesson;
+    
+            // 🔁 Fetch the lesson again, including enrolled tutees
+            const updatedLesson = await Lesson.findByPk(lessonId, {
+                include: [
+                    {
+                        model: sequelize.models.TuteeLesson,
+                        as: 'attendanceRecords',
+                        attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
+                    }
+                ]
+            });
+    
+            return updatedLesson;
         } catch (error) {
             await transaction.rollback();
             console.error("Error signing up tutee:", error);
             throw error;
         }
     };
+    
 
     // Class method for tutee cancellation
     Lesson.handleTuteeCancellation = async function (lessonId, tuteeUserId) {

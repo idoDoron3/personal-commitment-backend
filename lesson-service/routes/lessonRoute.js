@@ -8,9 +8,10 @@ const {
     enrollLessonSchema,
     withdrawLessonSchema,
     cancelLessonSchema,
-    getLessonsByTutorSchema
+    getLessonsByTutorSchema,
+    getAvailableLessonsBySubjectSchema ,
+    editLessonSchema
 } = require('../validators/lesson-validator');
-const Joi = require('joi');
 
 const router = express.Router();
 //
@@ -43,11 +44,19 @@ router.post(
     lessonController.getLessonsByTutor
 );
 
+router.patch(
+    "/edit",
+    extractUserInfo,
+    validateRole("mentor"),
+    validateBody(editLessonSchema),
+    lessonController.editLesson
+  );
+  
 //
 // TUTEE ROUTES
 //
 
-// Enroll in a lesson
+// Enroll to a lesson
 router.post(
     "/enroll",
     extractUserInfo,
@@ -63,12 +72,17 @@ router.delete(
     lessonController.withdrawFromLesson
 );
 
+// Get all available lessons by subject
+router.post(
+    "/available",
+    validateBody(getAvailableLessonsBySubjectSchema),
+    lessonController.getAvailableLessonsBySubject
+  );
+  
+
 // Get all lessons a tutee is enrolled in
 // ? check if need to change the get request because of the body used to send data instead of the URL
 // router.get("/tutee/:tuteeId", lessonController.getTuteeLessons);
 
-// Get all available lessons (with optional query filter)
-// ? check if need to change the get request because of the body used to send data instead of the URL
-router.get("/available", lessonController.getAvailableLessons);
 
 module.exports = router;

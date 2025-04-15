@@ -59,6 +59,24 @@ exports.cancelLesson = async (req, res, next) => {
   }
 };
 
+exports.editLesson = async (req, res, next) => {
+  try {
+    const tutorUserId = req.userId;
+    const lesson = await lessonService.editLesson({
+      ...req.validatedBody,
+      tutorUserId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Lesson updated successfully',
+      data: { lesson }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 /**
  * @desc    Get all lessons by tutor //! Amit: We Use POST instead of GET because get request can't send body
@@ -81,6 +99,29 @@ exports.getLessonsByTutor = async (req, res, next) => {
 };
 
 
+/**
+ * @desc    Get available lessons filtered by subject(s)
+ * @route   POST /lessons/available
+ * @access  Public
+ */
+exports.getAvailableLessonsBySubject = async (req, res, next) => {
+  try {
+    const { subjects } = req.validatedBody;
+    const lessons = await lessonService.getAvailableLessons(subjects);
+    console.log("Received subjects:", subjects);
+
+    res.status(200).json({
+      success: true,
+      message: 'Available lessons retrieved successfully',
+      data: { lessons }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
 //
 // *Tutee
 //
@@ -96,7 +137,6 @@ exports.getLessonsByTutor = async (req, res, next) => {
 
 
 // ! Tutor:
-// ! 1 get by user id: Easy
 // ! 2 getLessonsByTutor -----------------------------------------------------------------------------(Created/Occured/???????): Hard
 // ! 3 getAmountOfApprovedLessons (returns int): Medium
 //  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X
@@ -106,14 +146,13 @@ exports.getLessonsByTutor = async (req, res, next) => {
 
 
 // ! Tutee:
-// ! 8 get by user id: Easy
 // ! 9 getLessonsByTutee ----------------------------------------------------------------------------(upcoming/ ???): Hard
-// ! 10 getAvailableLessonsBySubject: Hard
-// ! 11 enrollToLesson: Medium
-// ! 12 withdrawFromLesson: Medium
+// ! 10 getAvailableLessonsBySubject: Hard V
+// ! 11 enrollToLesson: Medium V
+// ! 12 withdrawFromLesson: Medium V
 
-// 1, 8, 10 ,11 ,12 Itay
-// 2, 3, 6, 7, 9    Amit
+// 7, 10 ,11 ,12 Itay
+// 2, 3, 6, 9    Amit
 
 
 
@@ -143,15 +182,19 @@ exports.getLessonsByTutor = async (req, res, next) => {
 
 /**
  * @desc    Enroll a tutee in a lesson
+ * @param   {lessonId} - The lessonId
  * @route   POST /lessons/enroll
  * @access  Private (Tutee only)
  */
 exports.enrollToLesson = async (req, res, next) => {
   try {
     const userId = req.userId;
+    const tuteeFullName = req.userFullName;
+
     const enrollment = await lessonService.enrollToLesson({
       ...req.validatedBody,
-      tuteeId: userId
+      tuteeId: userId,
+      tuteeFullName: tuteeFullName
     });
 
     res.status(200).json({
@@ -164,28 +207,30 @@ exports.enrollToLesson = async (req, res, next) => {
   }
 };
 
+
 /**
  * @desc    Withdraw a tutee from a lesson
+ * @param   {lessonId} - The lessonId
  * @route   DELETE /lessons/withdraw
  * @access  Private (Tutee only)
  */
 exports.withdrawFromLesson = async (req, res, next) => {
   try {
-    const userId = req.userId;
-    const withdrawal = await lessonService.withdrawFromLesson({
-      ...req.validatedBody,
-      tuteeId: userId
-    });
+    const tuteeId = req.userId;
+    const { lessonId } = req.validatedBody;
+
+    const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeId);
 
     res.status(200).json({
       success: true,
       message: 'Withdrawn from lesson successfully',
-      data: { withdrawal }
+      data: { lesson: updatedLesson }
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 /**
  * @desc    Get all available lessons

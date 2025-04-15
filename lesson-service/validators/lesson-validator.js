@@ -104,6 +104,26 @@ const cancelLessonSchema = Joi.object({
         })
 });
 
+const editLessonSchema = Joi.object({
+    lessonId: Joi.number()
+      .integer()
+      .required()
+      .messages({
+        'number.base': 'Lesson ID must be a number',
+        'number.integer': 'Lesson ID must be an integer',
+        'any.required': 'Lesson ID is required',
+      }),
+    description: Joi.string()
+      .max(100)
+      .allow(null),
+    format: Joi.string()
+      .valid('online', 'in-person')
+      .allow(null),
+    locationOrLink: Joi.string()
+      .max(140)
+      .allow(null)
+  });
+  
 const getLessonsByTutorSchema = Joi.object({
     tutorUserId: Joi.string()
         .required()
@@ -113,8 +133,43 @@ const getLessonsByTutorSchema = Joi.object({
         })
 });
 
+// Tutee enrollment validation
+const enrollLessonSchema = Joi.object({
+    lessonId: Joi.number()
+      .integer()
+      .required()
+      .messages({
+        'number.base': 'Lesson ID must be a number',
+        'any.required': 'Lesson ID is required'
+      })
+  });
+
+// Tutee withdrawal validation
+const withdrawLessonSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'number.integer': 'Lesson ID must be an integer',
+            'any.required': 'Lesson ID is required'
+        })
+});
+
+// check if need to add strings also to the schema: Itay
+// Get all available lessons by subject for tutee (can be empty)
+const getAvailableLessonsBySubjectSchema = Joi.object({
+    subjects: Joi.array().items(Joi.string()).optional()
+  });
+  
+
+
 module.exports = {
     createLessonSchema,
     cancelLessonSchema,
-    getLessonsByTutorSchema
+    getLessonsByTutorSchema,
+    getAvailableLessonsBySubjectSchema,
+    enrollLessonSchema,
+    withdrawLessonSchema,
+    editLessonSchema
 };

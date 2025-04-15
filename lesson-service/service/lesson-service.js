@@ -81,6 +81,30 @@ const cancelLesson = async (validatedBody) => {
 };
 
 /**
+ * Edit a lesson
+ * @param {Object} lessonData - The validated lesson data
+ * @param {number} lessonData.lessonId - The ID of the lesson to edit
+ * @param {string} lessonData.tutorUserId - The user ID of the tutor
+ * @param {string} lessonData.description - The lesson description
+ * @param {string} lessonData.format - The format of the lesson (online/offline)
+ * @param {string} [lessonData.locationOrLink] - Optional location or link for the lesson
+ * * @returns {Promise<Object>} The updated lesson
+ * */
+const editLesson = async ({ lessonId, tutorUserId, description, format, locationOrLink }) => {
+    try {
+      const updatedLesson = await Lesson.editLessonByTutor(
+        lessonId,
+        tutorUserId,
+        { description, format, locationOrLink }
+      );
+      return updatedLesson;
+    } catch (error) {
+      console.error("Error editing lesson:", error);
+      throw new appError("Failed to edit lesson", 500, "EDIT_LESSON_ERROR", "lesson-service:editLesson");
+    }
+  };
+  
+/**
  * Get all lessons by tutor
  * @param {Object} validatedBody - The validated request body containing tutorId and userId
  * @returns {Promise<Array>} Array of lessons
@@ -114,35 +138,30 @@ const getLessonsByTutor = async (validatedBody) => {
 
 /**
  * Enroll a tutee into a lesson
- * @param {number} lessonId - The ID of the lesson
- * @param {number} tuteeId - The ID of the tutee
- * @returns {Promise<Object>} The enrollment result
+ * @param {Object} input
+ * @param {number} input.lessonId - The ID of the lesson
+ * @param {string} input.tuteeId - The ID of the tutee (from token)
+ * @returns {Promise<Object>} The updated lesson
  */
-const enrollToLesson = async (lessonId, tuteeId) => {
+const enrollToLesson = async ({ lessonId, tuteeId,tuteeFullName }) => {
     try {
-        // Validate inputs
-        if (!lessonId || isNaN(Number(lessonId)) || !tuteeId || isNaN(Number(tuteeId))) {
-            const error = new Error('Invalid lesson ID or tutee ID');
-            error.type = 'INVALID_ID';
-            throw error;
-        }
-
-        // Use the static method from the Lesson model
-        const result = await Lesson.signUpTutee(Number(lessonId), Number(tuteeId));
-        return result;
+      if (!lessonId || isNaN(Number(lessonId)) || !tuteeId || typeof tuteeId !== 'string') {
+        throw new appError('Invalid lesson or tutee ID', 400, 'INVALID_ID', 'lesson-service:enrollToLesson');
+      }
+  
+      const lesson = await Lesson.signUpTutee(Number(lessonId), tuteeId, tuteeFullName);
+      return lesson;
     } catch (error) {
-        console.error('Error in enrollToLesson service:', error);
-
-        if (error.type) {
-            throw error;
-        }
-
-        const serviceError = new Error('Failed to enroll tutee to lesson');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
+      console.error('Error in enrollToLesson service:', error);
+  
+      if (error instanceof appError || error.type === 'INVALID_ID') {
+        throw error;
+      }
+  
+      throw new appError('Failed to enroll tutee to lesson', 500, 'ENROLL_ERROR', 'lesson-service:enrollToLesson');
     }
-};
+  };
+  
 
 /**
  * Withdraw a tutee from a lesson
@@ -152,29 +171,23 @@ const enrollToLesson = async (lessonId, tuteeId) => {
  */
 const withdrawFromLesson = async (lessonId, tuteeId) => {
     try {
-        // Validate inputs
-        if (!lessonId || isNaN(Number(lessonId)) || !tuteeId || isNaN(Number(tuteeId))) {
-            const error = new Error('Invalid lesson ID or tutee ID');
-            error.type = 'INVALID_ID';
-            throw error;
+        if (!lessonId || isNaN(Number(lessonId)) || !tuteeId || typeof tuteeId !== 'string') {
+            throw new appError('Invalid lesson ID or tutee ID', 400, 'INVALID_ID');
         }
 
-        // Use the static method from the Lesson model
-        const result = await Lesson.handleTuteeCancellation(Number(lessonId), Number(tuteeId));
-        return result;
+        const updatedLesson = await Lesson.handleTuteeCancellation(Number(lessonId), tuteeId);
+        return updatedLesson;
     } catch (error) {
         console.error('Error in withdrawFromLesson service:', error);
 
-        if (error.type) {
+        if (error instanceof appError) {
             throw error;
         }
 
-        const serviceError = new Error('Failed to withdraw tutee from lesson');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
+        throw new appError('Failed to withdraw tutee from lesson', 500, 'WITHDRAW_ERROR');
     }
 };
+
 
 /**
  * Get all lessons a tutee is enrolled in
@@ -204,66 +217,41 @@ const getLessonsByTutee = async (tuteeId) => {
 };
 
 /**
- * Get all available lessons (with optional filters)
- * @param {Array<string>} subjects - Optional array of subjects to filter by
+ * Get all available lessons, optionally filtered by subject(s)
+ * @param {Array<string>} [subjects] - Optional array of subject names to filter
  * @returns {Promise<Array>} Array of available lessons
  */
 const getAvailableLessons = async (subjects) => {
     try {
-        // Parse subjects if it's a string
-        let subjectArray = subjects;
-        if (typeof subjects === 'string') {
-            try {
-                subjectArray = JSON.parse(subjects);
-            } catch (e) {
-                // If it's not valid JSON, try to split by comma
-                subjectArray = subjects.split(',').map(s => s.trim());
-            }
-        }
-
-        // Build the query
-        const queryOptions = {
-            where: {
-                status: 'created', // Only show lessons that are still open
-                appointedTime: {
-                    [Op.gte]: new Date() // Only show future lessons
-                }
-            },
-            include: [
-                {
-                    model: Tutor,
-                    as: 'tutor',
-                    attributes: ['tutorId', 'firstName', 'lastName']
-                }
-            ],
-            order: [
-                ['appointedTime', 'ASC'] // Show the soonest lessons first
-            ]
-        };
-
-        // Add subject filter if provided
-        if (subjectArray && subjectArray.length > 0) {
-            queryOptions.where.subjectName = {
-                [Op.in]: subjectArray
-            };
-        }
-
-        // Get all available lessons
-        const lessons = await Lesson.findAll(queryOptions);
-        return lessons;
+      // ✅ Validate subjects
+      if (subjects && (!Array.isArray(subjects) || !subjects.every(sub => typeof sub === 'string'))) {
+        throw new appError(
+          'Invalid subjects: must be an array of strings',
+          400,
+          'INVALID_SUBJECTS',
+          'lesson-service:getAvailableLessons'
+        );
+      }
+  
+      // ✅ Call model-level method
+      return await Lesson.getAvailableLessons(subjects);
     } catch (error) {
-        console.error('Error in getAvailableLessons service:', error);
-
-        if (error.type) {
-            throw error;
-        }
-
-        const serviceError = new Error('Failed to get available lessons');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
+      console.error('Error in getAvailableLessons service:', error);
+  
+      if (error instanceof appError) throw error;
+  
+      throw new appError(
+        'Failed to get available lessons',
+        500,
+        'GET_AVAILABLE_LESSONS_ERROR',
+        'lesson-service:getAvailableLessons'
+      );
     }
-};
+  };
+  
+  
+
+
 
 //* helper functions
 
@@ -275,6 +263,7 @@ module.exports = {
     enrollToLesson,
     withdrawFromLesson,
     getLessonsByTutee,
-    getAvailableLessons
+    getAvailableLessons,
+    editLesson,
 };
 
