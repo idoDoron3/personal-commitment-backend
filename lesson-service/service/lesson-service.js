@@ -1,6 +1,7 @@
 const { Lesson, Tutor } = require('../models');
 const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
+const { Op } = require('sequelize');
 
 /**
  * Create a new lesson
@@ -56,59 +57,89 @@ const createLesson = async (lessonData) => {
  * @param {Object} validatedBody - The validated request body containing lessonId and tutorId
  * @returns {Promise<Object>} The canceled lesson
  */
-const cancelLesson = async (validatedBody) => {
+const cancelLesson = async (cancelationData) => {
     try {
-        const { lessonId, tutorUserId } = validatedBody;
-        const lesson = await Lesson.findByPk(lessonId);
-        if (!lesson) {
-            throw new AppError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
+        const { lessonId, tutorUserId } = cancelationData;
+        const lessonToCancel = await Lesson.findByPk(lessonId);
+        if (!lessonToCancel) {
+            throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
         }
-        if (lesson.tutorUserId !== tutorUserId) {
-            throw new AppError('Unauthorized: Only the assigned tutor can cancel the lesson', 403, 'UNAUTHORIZED', 'lesson-service:cancelLesson');
+        if (lessonToCancel.tutorUserId !== tutorUserId) {
+            throw new appError('Unauthorized: Only the assigned tutor can cancel the lesson', 403, 'UNAUTHORIZED', 'lesson-service:cancelLesson');
         }
-        if (lesson.status !== LESSON_STATUS.CREATED) {
-            throw new AppError(`Lesson cannot be canceled in its current status: ${lesson.status}`, 400, 'INVALID_STATUS', 'lesson-service:cancelLesson');
+        if (lessonToCancel.status !== LESSON_STATUS.CREATED) {
+            throw new appError(`Lesson cannot be canceled in its current status: ${lessonToCancel.status}`, 400, 'INVALID_STATUS', 'lesson-service:cancelLesson');
         }
-        if (lesson.appointedDateTime <= new Date()) {
-            throw new AppError('Cannot cancel a lessons whose appointed time has passed', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
+        if (lessonToCancel.appointedDateTime <= new Date()) {
+            throw new appError('Cannot cancel a lessons whose appointed time has passed', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
         }
         const result = await Lesson.cancelLesson(lessonId);
         return result;
     } catch (error) {
-        if (error instanceof AppError) { throw error; }
-        throw new AppError('Failed to cancel lesson', 500, 'CANCEL_LESSON_ERROR', 'lesson-service:cancelLesson');
+        if (error.type) { throw error; }
+        throw new appError('Failed to cancel lesson', 500, 'CANCEL_LESSON_ERROR', 'lesson-service:cancelLesson');
     }
 };
 
+
+/**
+ * Get the amount of approved lessons
+ * @param {string} tutorUserId - The ID of the tutor
+ * @returns {Promise<number>} The amount of approved lessons
+ */
+const getAmountOfApprovedLessons = async (tutorUserId) => {
+    try {
+        const amountOfApprovedLessons = await Lesson.getAmountOfApprovedLessons(tutorUserId);
+        return amountOfApprovedLessons;
+    } catch (error) {
+        throw new appError('Failed to get amount of approved lessons', 500, 'GET_AMOUNT_OF_APPROVED_LESSONS_ERROR', 'lesson-service:getAmountOfApprovedLessons');
+    }
+}
+
+
 /**
  * Get all lessons by tutor
- * @param {Object} validatedBody - The validated request body containing tutorId and userId
+ * @param {Object} tutorData - The tutor data
+ * @param {string} tutorData.tutorUserId - The ID of the tutor
+ * @param {string} tutorData.lessonCategory - The type of lessons to retrieve ('upcoming' or 'summaryPending')
  * @returns {Promise<Array>} Array of lessons
  */
-const getLessonsByTutor = async (validatedBody) => {
+const getLessonsOfTutor = async (tutorData) => {
     try {
-        const { tutorUserId } = validatedBody;
-
-        // Check if tutor exists and matches the authenticated user
-        const tutor = await Tutor.findByUserId(tutorUserId);
-        if (!tutor) {
-            throw new AppError('Tutor not found', 404, 'TUTOR_NOT_FOUND');
-        }
-
-        if (tutor.tutorUserId !== tutorUserId) {
-            throw new AppError('Unauthorized: You can only access your own lessons', 403, 'UNAUTHORIZED');
-        }
-
-        // Get all lessons for the tutor
-        //! Amit: the function Lesson.getUpcomingLessonsByTutor(tutorId) is not yet implemented
-        const lessons = await Lesson.getUpcomingLessonsByTutor(tutorUserId);
+        const { tutorUserId, lessonCategory } = tutorData;
+        // Get lessons for the tutor
+        const lessons = await Lesson.getLessonsOfTutor(tutorUserId, lessonCategory);
         return lessons;
     } catch (error) {
-        console.error('Error in getLessonsByTutor service:', error);
-        if (error instanceof AppError) {
+        console.error('Error in getLessonsOfTutor service:', error);
+        if (error instanceof appError) {
             throw error;
         }
-        throw new AppError('Failed to get lessons by tutor', 500, 'SERVICE_ERROR');
+        throw new appError('Failed to get lessons of tutor', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutor');
+    }
+};
+
+
+
+/**
+ * Get all lessons by tutee
+ * @param {Object} tuteeData - The tutee data
+ * @param {string} tuteeData.tuteeUserId - The ID of the tutee
+ * @param {string} tuteeData.lessonCategory - The type of lessons to retrieve ('upcoming' or 'reviewPending')
+ * @returns {Promise<Array>} Array of lessons
+ */
+const getLessonsOfTutee = async (tuteeData) => {
+    try {
+        const { tuteeUserId, lessonCategory } = tuteeData;
+        // Get lessons for the tutee
+        const lessons = await Lesson.getLessonsOfTutee(tuteeUserId, lessonCategory);
+        return lessons;
+    } catch (error) {
+        console.error('Error in getLessonsOfTutee service:', error);
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError('Failed to get lessons of tutee', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutee');
     }
 };
 
@@ -176,32 +207,7 @@ const withdrawFromLesson = async (lessonId, tuteeId) => {
     }
 };
 
-/**
- * Get all lessons a tutee is enrolled in
- * @param {number} tuteeId - The ID of the tutee
- * @returns {Promise<Array>} Array of lessons
- */
-const getLessonsByTutee = async (tuteeId) => {
-    try {
-        // Validate tuteeId
-        if (!tuteeId || isNaN(Number(tuteeId))) {
-            const error = new Error('Invalid tutee ID');
-            error.type = 'INVALID_ID';
-            throw error;
-        }
 
-        // Get all lessons for the tutee
-        const lessons = await Lesson.getUpcomingLessonsByTutee(Number(tuteeId));
-        return lessons;
-    } catch (error) {
-        console.error('Error in getLessonsByTutee service:', error);
-
-        if (error.type) {
-            throw error;
-        }
-
-    }
-};
 
 /**
  * Get all available lessons (with optional filters)
@@ -271,10 +277,11 @@ const getAvailableLessons = async (subjects) => {
 module.exports = {
     createLesson,
     cancelLesson,
-    getLessonsByTutor,
+    getLessonsOfTutor,
     enrollToLesson,
     withdrawFromLesson,
-    getLessonsByTutee,
-    getAvailableLessons
+    getLessonsOfTutee,
+    getAvailableLessons,
+    getAmountOfApprovedLessons
 };
 

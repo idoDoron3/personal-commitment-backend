@@ -31,7 +31,6 @@ exports.createLesson = async (req, res, next) => {
       data: { lesson }
     });
   } catch (err) {
-    // console.warn('createLesson controller error:', err);
     next(err);
   }
 };
@@ -43,7 +42,9 @@ exports.createLesson = async (req, res, next) => {
  */
 exports.cancelLesson = async (req, res, next) => {
   try {
-    const canceledLesson = await lessonService.cancelLesson(req.validatedBody);
+    const tutorUserId = req.userId;
+    const tutorFullName = req.userFullName;
+    const canceledLesson = await lessonService.cancelLesson({ ...req.validatedBody, tutorUserId });
 
     res.status(200).json({
       success: true,
@@ -54,28 +55,47 @@ exports.cancelLesson = async (req, res, next) => {
       }
     });
   } catch (err) {
-    console.warn('cancelLesson controller error:', err);
     next(err);
   }
 };
 
 
-/**
- * @desc    Get all lessons by tutor //! Amit: We Use POST instead of GET because get request can't send body
- * @route   POST /lessons/tutor-upcoming-lessons
- * @access  Private (Tutor only)
- */
-exports.getLessonsByTutor = async (req, res, next) => {
+exports.getAmountOfApprovedLessons = async (req, res, next) => {
   try {
-    const lessons = await lessonService.getLessonsByTutor(req.validatedBody);
+    const tutorUserId = req.userId;
+    const amountOfApprovedLessons = await lessonService.getAmountOfApprovedLessons(tutorUserId);
 
     res.status(200).json({
       success: true,
-      message: 'Lessons retrieved successfully',
-      data: { lessons }
+      message: 'Amount of approved lessons retrieved successfully',
+      data: { amountOfApprovedLessons }
     });
   } catch (err) {
-    console.warn('getLessonsByTutor controller error:', err);
+    next(err);
+  }
+}
+
+/**
+ * @desc    Get all lessons by tutor (upcoming or summary pending)
+ * @route   GET /lessons/tutor-upcoming-lessons or /lessons/tutor-summary-pending-lessons
+ * @access  Private (Tutor only)
+ */
+exports.getLessonsOfTutor = async (req, res, next) => {
+  try {
+    const tutorUserId = req.userId;
+    const lessonCategory = req.path.includes('summary-pending') ? 'summaryPending' : 'upcoming';
+
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutor({
+      tutorUserId,
+      lessonCategory
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Tutor ${lessonCategory} lessons retrieved successfully`,
+      data: { lessonsWithEnrolledTutees }
+    });
+  } catch (err) {
     next(err);
   }
 };
@@ -85,6 +105,31 @@ exports.getLessonsByTutor = async (req, res, next) => {
 // *Tutee
 //
 
+// TODO: amit: I didnt check yet this fucntion throw the layers because enrollToLesson is not implemented yet
+/**
+ * @desc    Get all lessons by tutee (upcoming or review pending)
+ * @route   GET /lessons/tutee-upcoming-lessons or /lessons/tutee-review-pending-lessons
+ * @access  Private (Tutee only)
+ */
+exports.getLessonsOfTutee = async (req, res, next) => {
+  try {
+    const tuteeUserId = req.userId;
+    const lessonCategory = req.path.includes('review-pending') ? 'reviewPending' : 'upcoming';
+
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee({
+      tuteeUserId,
+      lessonCategory
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Tutee ${lessonCategory} lessons retrieved successfully`,
+      data: { lessonsWithEnrolledTutees }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // ! get My next Lessons tutoee
 // ! get My next Lessons tutor
@@ -96,24 +141,22 @@ exports.getLessonsByTutor = async (req, res, next) => {
 
 
 // ! Tutor:
-// ! 1 get by user id: Easy
-// ! 2 getLessonsByTutor -----------------------------------------------------------------------------(Created/Occured/???????): Hard
+// ! 2 getLessonsOfTutor -----------------------------------------------------------------------------(Created/OccuredButNotCompleted): Hard
 // ! 3 getAmountOfApprovedLessons (returns int): Medium
 //  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X
 //  5 getPendingLessons - completed/unattended
 // ! 6 createSummary -----------------------------------------------------------------------------,TutteesAtendncy, summary,: Hard
-// ! 7 addLinkOrLocationToLesson  : Easy
+// ! 7 addLinkOrLocationToLesson  : Easy (format, link\location) (onlinVSin-person)
 
 
 // ! Tutee:
-// ! 8 get by user id: Easy
-// ! 9 getLessonsByTutee ----------------------------------------------------------------------------(upcoming/ ???): Hard
+// ! 9 getLessonsOfTutee ----------------------------------------------------------------------------(upcoming/ ???): Hard
 // ! 10 getAvailableLessonsBySubject: Hard
 // ! 11 enrollToLesson: Medium
 // ! 12 withdrawFromLesson: Medium
 
-// 1, 8, 10 ,11 ,12 Itay
-// 2, 3, 6, 7, 9    Amit
+// 7, 10 ,11 ,12 Itay
+// 6  Amit 3 2 9
 
 
 

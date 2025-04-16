@@ -51,9 +51,9 @@ router.post("/create", authenticateToken, (req, res) =>
 
 /**
  * @swagger
- * /lessons/abort:
+ * /lessons/cancel:
  *   patch:
- *     summary: Abort a lesson (Tutor only)
+ *     summary: Cancel a lesson (Tutor only)
  *     tags: [Lessons]
  *     requestBody:
  *       required: true
@@ -71,35 +71,63 @@ router.post("/create", authenticateToken, (req, res) =>
  *                 type: integer
  *     responses:
  *       200:
- *         description: Lesson aborted
+ *         description: Lesson canceled
  *       404:
  *         description: Lesson not found
  */
-router.patch("/abort", authenticateToken, (req, res) =>
-  gatewayController.handleRequest(req, res, "lesson", "/abort")
+router.patch("/cancel", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/cancel")
+);
+
+
+/**
+ * @swagger
+ * /lessons/approved-lessons-amount:
+ *   get:
+ *     summary: Get the amount of approved lessons (Tutor only)
+ *     tags: [Lessons]
+ *     responses:
+ *       200:
+ *         description: Amount of approved lessons
+ */
+router.get("/approved-lessons-amount", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/approved-lessons-amount")
+);
+
+
+/**
+ * @swagger
+ * /lessons/tutor-upcoming-lessons:
+ *   get:
+ *     summary: Get all upcoming lessons of tutor
+ *     tags: [Lessons]
+ *     responses:
+ *       200:
+ *         description: List of upcoming lessons
+ *       404:
+ *         description: Tutor not found
+ */
+router.get("/tutor-upcoming-lessons", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/tutor-upcoming-lessons")
 );
 
 /**
  * @swagger
- * /lessons/tutor/{tutorId}:
+ * /lessons/tutor-summary-pending-lessons:
  *   get:
- *     summary: Get all lessons by a tutor
+ *     summary: Get all summary pending lessons of tutor
  *     tags: [Lessons]
- *     parameters:
- *       - in: path
- *         name: tutorId
- *         required: true
- *         schema:
- *           type: integer
  *     responses:
  *       200:
- *         description: List of lessons
+ *         description: List of summary pending lessons
  *       404:
  *         description: Tutor not found
  */
-router.get("/tutor/:tutorId", authenticateToken, (req, res) =>
-  gatewayController.handleRequest(req, res, "lesson", `/tutor/${req.params.tutorId}`)
+router.get("/tutor-summary-pending-lessons", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/tutor-summary-pending-lessons")
 );
+
+
 
 /**
  * @swagger
@@ -167,25 +195,54 @@ router.delete("/withdraw", authenticateToken, (req, res) =>
 
 /**
  * @swagger
- * /lessons/tutee/{tuteeId}:
+ * /lessons/tutee-upcoming-lessons:
  *   get:
- *     summary: Get all lessons a tutee is enrolled in
+ *     summary: Get all upcoming lessons of tutee
  *     tags: [Lessons]
- *     parameters:
- *       - in: path
- *         name: tuteeId
- *         required: true
- *         schema:
- *           type: integer
  *     responses:
  *       200:
- *         description: List of enrolled lessons
+ *         description: List of upcoming lessons
  *       404:
- *         description: Tutee not found
+ *         description: Tutor not found
  */
-router.get("/tutee/:tuteeId", authenticateToken, (req, res) =>
-  gatewayController.handleRequest(req, res, "lesson", `/tutee/${req.params.tuteeId}`)
+router.get("/tutee-upcoming-lessons", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/tutee-upcoming-lessons")
 );
+
+/**
+ * @swagger
+ * /lessons/tutee-review-pending-lessons:
+ *   get:
+ *     summary: Get all review pending lessons of tutee
+ *     tags: [Lessons]
+ *     responses:
+ *       200:
+ *         description: List of review pending lessons
+ *       404:
+ *         description: Tutor not found
+ */
+router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/tutee-review-pending-lessons")
+);
+
+
+// /**
+//  * @swagger
+//  * /lessons/upload-lesson-summary:
+//  *   patch:
+//  *     summary: Upload a lesson summary
+//  *     tags: [Lessons]
+//  *     responses:
+//  *       200:
+//  *         description: Lesson summary uploaded
+//  *       404:
+//  *         description: Lesson not found
+// */
+
+// router.patch("/upload-lesson-summary", authenticateToken, (req, res) =>
+//   gatewayController.handleRequest(req, res, "lesson", "/upload-lesson-summary")
+// );
+
 
 /**
  * @swagger

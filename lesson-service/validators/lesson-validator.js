@@ -94,27 +94,27 @@ const cancelLessonSchema = Joi.object({
             'number.integer': 'Lesson ID must be an integer',
             'any.required': 'Lesson ID is required'
         }),
-
-    // Tutor ID validation
-    tutorUserId: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'User ID cannot be empty',
-            'any.required': 'User ID is required'
-        })
 });
 
-const getLessonsByTutorSchema = Joi.object({
-    tutorUserId: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'User ID cannot be empty',
-            'any.required': 'User ID is required'
-        })
-});
+// const uploadLessonSummarySchema = Joi.object({
+//     lessonId: Joi.number()
+//         .integer()
+//         .required()
+//         .messages({
+//             'number.base': 'Lesson ID must be a number',
+//             'number.integer': 'Lesson ID must be an integer',
+//             'any.required': 'Lesson ID is required'
+//         }),
+//     summary: Joi.string()
+//         .required()
+//         .messages({
+//             'string.empty': 'Summary cannot be empty',
+//             'any.required': 'Summary is required'
+//         })
+// });
+
 
 module.exports = {
     createLessonSchema,
     cancelLessonSchema,
-    getLessonsByTutorSchema
 };

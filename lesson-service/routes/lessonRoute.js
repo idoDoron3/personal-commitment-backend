@@ -8,7 +8,6 @@ const {
     enrollLessonSchema,
     withdrawLessonSchema,
     cancelLessonSchema,
-    getLessonsByTutorSchema
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
 
@@ -26,26 +25,68 @@ router.post(
     lessonController.createLesson
 );
 
-// Abort a lesson
+// Cancel a lesson
 router.patch(
     "/cancel",
     extractUserInfo,
+    validateRole('mentor'),
     validateBody(cancelLessonSchema),
     lessonController.cancelLesson
 );
 
-// Get all lessons by tutor
-// ! we also need to ask for the tutorId to verify that it is the same tutor that is logged in
-router.post(
+// Get the amount of approved lessons
+router.get(
+    "/approved-lessons-amount",
+    extractUserInfo,
+    validateRole('mentor'),
+    lessonController.getAmountOfApprovedLessons
+);
+
+
+router.get(
     "/tutor-upcoming-lessons",
     extractUserInfo,
-    validateBody(getLessonsByTutorSchema),
-    lessonController.getLessonsByTutor
+    validateRole('mentor'),
+    lessonController.getLessonsOfTutor
+);
+
+router.get(
+    "/tutor-summary-pending-lessons",
+    extractUserInfo,
+    validateRole('mentor'),
+    lessonController.getLessonsOfTutor
 );
 
 //
 // TUTEE ROUTES
 //
+
+router.get(
+    "/tutee-upcoming-lessons",
+    extractUserInfo,
+    validateRole('tutee'),
+    lessonController.getLessonsOfTutee
+);
+
+
+router.get(
+    "/tutee-review-pending-lessons",
+    extractUserInfo,
+    validateRole('tutee'),
+    lessonController.getLessonsOfTutee
+);
+
+
+// router.patch(
+//     "/upload-lesson-summary",
+//     extractUserInfo,
+//     validateRole('tutee'),
+//     validateBody(uploadLessonSummarySchema),
+//     lessonController.uploadLessonSummary
+// );
+
+
+
 
 // Enroll in a lesson
 router.post(

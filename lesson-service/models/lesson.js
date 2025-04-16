@@ -1,6 +1,7 @@
 // Added Op for time comparisons
 const { Model, DataTypes, ValidationError, Op } = require('sequelize');
 const appError = require('../utils/errors/appError');
+
 // Define constants for status values
 const LESSON_STATUS = {
     CREATED: 'created',
@@ -28,7 +29,7 @@ module.exports = (sequelize) => {
         static associate(models) {
             this.hasMany(models.TuteeLesson, {
                 foreignKey: 'lesson_id',
-                as: 'attendanceRecords'
+                as: 'enrolledTutees'
             });
         }
 
@@ -95,18 +96,18 @@ module.exports = (sequelize) => {
                     lock: transaction.LOCK.UPDATE,
                     include: [{
                         model: sequelize.models.TuteeLesson,
-                        as: 'attendanceRecords',
+                        as: 'enrolledTutees',
                         attributes: ['tutee_user_id'] // Only need tutee_user_id for the deletion step
                     }]
                 });
                 if (!lesson) {
-                    throw new appError('Lesson not found', 404, 'NOT_FOUND');
+                    throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
                 }
                 lesson.status = LESSON_STATUS.CANCELED;
                 await lesson.save({ transaction });
 
                 // Get affected tutees before deleting their records
-                const affectedTutees = lesson.attendanceRecords.map(record => record.tutee_user_id);
+                const affectedTutees = lesson.enrolledTutees.map(record => record.tutee_user_id);
                 // Remove associated signups (TuteeLesson records)
                 await sequelize.models.TuteeLesson.destroy({
                     where: { lesson_id: lessonId },
@@ -130,163 +131,106 @@ module.exports = (sequelize) => {
                     throw error; // Custom application error
                 }
                 // General DB error handling
-                throw new appError('Database error while canceling lesson', 500, 'DB_ERROR', [{ originalError: error.message }]);
+                throw new appError(error.message, 500, 'Model Error', 'lesson-model:cancelLesson');
             }
         }
 
-        static async getUpcomingLessonsByTutor(tutorUserId, options = {}) {
-            // Validate input
-            if (!tutorUserId || typeof tutorUserId !== 'string') {
-                throw new Error('Invalid or missing tutorUserId provided. Must be a string.');
-            }
-
-            const { transaction, includeTutees = true } = options; // Option to include tutee details
-
+        static async getLessonsOfTutor(tutorUserId, lessonCategory) {
             try {
                 const now = new Date();
-                const queryOptions = {
-                    where: {
-                        tutorUserId: tutorUserId,
-                        // Focus on lessons that are still scheduled and haven't reached a terminal state
-                        status: LESSON_STATUS.CREATED,
-                        appointedDateTime: {
-                            [Op.gte]: now // Appointed time is now or in the future
-                        }
-                    },
-                    attributes: [
-                        'lessonId', 'subjectName', 'level', 'tutorUserId',
-                        'appointedDateTime', 'status', 'summary', 'locationOrLink'
-                    ],
-                    order: [
-                        ['appointedDateTime', 'ASC'] // Order by the soonest lesson first
-                    ],
-                    transaction // Pass transaction if provided
+                const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                let whereClause = {
+                    tutorUserId: tutorUserId
                 };
 
-                if (includeTutees) {
-                    queryOptions.include = [
-                        {
-                            model: sequelize.models.Tutee,
-                            as: 'tutees',
-                            // Select only necessary tutee attributes to avoid over-fetching
-                            attributes: ['tuteeUserId', 'firstName', 'lastName'], // Adjust attributes as needed
-                            through: { attributes: [] } // Don't include attributes from the join table
-                        }
-                    ];
+                if (lessonCategory === 'upcoming') {
+                    whereClause.status = LESSON_STATUS.CREATED;
+                    whereClause.appointedDateTime = {
+                        [Op.gte]: now // Future dates
+                    };
+                } else if (lessonCategory === 'summaryPending') {
+                    whereClause.status = LESSON_STATUS.CREATED;
+                    whereClause.appointedDateTime = {
+                        [Op.lt]: new Date(now.getTime() - ONE_DAY_IN_MS) // Past dates with 24-hour buffer
+                    };
+                } else {
+                    throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutor');
                 }
 
-                const upcomingLessons = await Lesson.findAll(queryOptions);
-
-                console.log(`Found ${upcomingLessons.length} upcoming lessons for tutor ${tutorUserId}.`);
-                return upcomingLessons;
-
-            } catch (error) {
-                console.error(`Error fetching upcoming lessons for tutor ${tutorUserId}:`, error);
-                // Re-throw the error so the calling code can handle it
-                throw error;
-            }
-        }
-
-        static async countLessonsForTutorByStatusType(tutorUserId, countType, options = {}) {
-            if (!tutorUserId || typeof tutorUserId !== 'string') {
-                throw new Error('Invalid or missing tutorUserId provided. Must be a string.');
-            }
-
-            const validCountTypes = ['approved', 'notapproved', 'pendingApproval']; // Define valid types
-            if (!validCountTypes.includes(countType)) {
-                throw new Error(`Invalid countType specified: ${countType}. Must be one of: ${validCountTypes.join(', ')}`);
-            }
-
-            const { transaction } = options;
-            let statusWhereClause;
-
-            // Map countType to the status condition
-            switch (countType) {
-                case 'approved':
-                    statusWhereClause = LESSON_STATUS.APPROVED;
-                    break;
-                case 'notapproved':
-                    statusWhereClause = LESSON_STATUS.NOTAPPROVED;
-                    break;
-                case 'pendingApproval':
-                    statusWhereClause = { [Op.in]: [LESSON_STATUS.COMPLETED, LESSON_STATUS.UNATTENDED] };
-                    break;
-                // Add more cases here if needed in the future
-                default:
-                    // This case should theoretically not be reached due to validation above
-                    throw new Error(`Unhandled countType: ${countType}`);
-            }
-
-            try {
-                const count = await Lesson.count({
-                    where: {
-                        tutorUserId: tutorUserId,
-                        status: statusWhereClause
-                    },
-                    transaction
-                });
-                console.log(`Found ${count} lessons of type '${countType}' for tutor ${tutorUserId}.`);
-                return count;
-            } catch (error) {
-                console.error(`Error counting lessons of type '${countType}' for tutor ${tutorUserId}:`, error);
-                throw error;
-            }
-        }
-        static async getUpcomingLessonsByTutee(tuteeUserId, options = {}) {
-            // Validate input
-            if (!tuteeUserId || typeof tuteeUserId !== 'string') {
-                throw new Error('Invalid or missing tuteeUserId provided. Must be a string.');
-            }
-
-            // Default option to include tutor details, can be overridden
-            const { transaction, includeTutor = true } = options;
-
-            try {
-                const now = new Date();
-
-                const queryOptions = {
-                    where: {
-                        status: LESSON_STATUS.CREATED, // Only lessons that haven't started/finished/canceled
-                        appointedDateTime: {
-                            [Op.gte]: now // Appointed time is now or in the future
-                        }
-                    },
-                    attributes: [
-                        'lessonId', 'subjectName', 'level', 'tutorUserId',
-                        'appointedDateTime', 'status', 'summary', 'locationOrLink'
-                    ],
+                const lessons = await Lesson.findAll({
+                    where: whereClause,
+                    order: [['appointedDateTime', 'ASC']],
                     include: [
                         {
                             model: sequelize.models.TuteeLesson,
-                            as: 'attendanceRecords',
+                            as: 'enrolledTutees',
+                            attributes: ['tutee_full_name']
+                        }
+                    ]
+                });
+
+                return lessons;
+            } catch (error) {
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Failed to get lessons of tutor', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutor');
+            }
+        }
+
+        static async getLessonsOfTutee(tuteeUserId, lessonCategory) {
+            try {
+                const now = new Date();
+                let whereClause = {
+                    status: LESSON_STATUS.CREATED
+                };
+
+                if (lessonCategory === 'upcoming') {
+                    whereClause.appointedDateTime = {
+                        [Op.gte]: now // Future dates
+                    };
+                } else if (lessonCategory === 'reviewPending') {
+                    whereClause.appointedDateTime = {
+                        [Op.lt]: now // Past dates
+                    };
+                } else {
+                    throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
+                }
+
+                const lessons = await Lesson.findAll({
+                    where: whereClause,
+                    order: [['appointedDateTime', 'ASC']],
+                    include: [
+                        {
+                            model: sequelize.models.TuteeLesson,
+                            as: 'enrolledTutees',
                             where: { tutee_user_id: tuteeUserId },
                             attributes: ['tutee_full_name'],
                             required: true // Makes this an INNER JOIN
                         }
-                    ],
-                    order: [
-                        ['appointedDateTime', 'ASC'] // Show the soonest lessons first
-                    ],
-                    transaction // Pass transaction if provided
-                };
+                    ]
+                });
 
-                // Optionally add Tutor details to the result
-                if (includeTutor) {
-                    queryOptions.include.push({
-                        model: sequelize.models.Tutor,
-                        as: 'tutor',
-                        attributes: ['tutorUserId', 'firstName', 'lastName']
-                    });
-                }
-
-                const upcomingLessons = await Lesson.findAll(queryOptions);
-
-                console.log(`Found ${upcomingLessons.length} upcoming lessons for tutee ${tuteeUserId}.`);
-                return upcomingLessons;
-
+                return lessons;
             } catch (error) {
-                console.error(`Error fetching upcoming lessons for tutee ${tuteeUserId}:`, error);
-                throw error;
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Failed to get lessons of tutee', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutee');
+            }
+        }
+
+        static async getAmountOfApprovedLessons(tutorUserId) {
+            try {
+                const amountOfApprovedLessons = await Lesson.count({
+                    where: {
+                        tutorUserId: tutorUserId,
+                        status: LESSON_STATUS.APPROVED
+                    }
+                });
+                return amountOfApprovedLessons;
+            } catch (error) {
+                throw new appError('Failed to get amount of approved lessons', 500, 'Model Error', 'lesson-model:getAmountOfApprovedLessons');
             }
         }
 
@@ -632,3 +576,10 @@ module.exports = (sequelize) => {
     };
     return Lesson;
 };
+
+// Export the constants
+module.exports.LESSON_STATUS = LESSON_STATUS;
+module.exports.LESSON_FORMAT = LESSON_FORMAT;
+module.exports.MAX_TUTEES_PER_LESSON = MAX_TUTEES_PER_LESSON;
+module.exports.MAX_OPEN_LESSONS_PER_TUTOR = MAX_OPEN_LESSONS_PER_TUTOR;
+module.exports.MAX_SIGNEDUP_LESSONS_PER_TUTEE = MAX_SIGNEDUP_LESSONS_PER_TUTEE;
