@@ -622,13 +622,33 @@ module.exports = (sequelize) => {
         const transaction = await sequelize.transaction();
         try {
             const lesson = await Lesson.findByPk(lessonId, { transaction, lock: transaction.LOCK.UPDATE });
-            if (!lesson) { throw new Error('Lesson not found'); }
-            if (lesson.status !== LESSON_STATUS.CREATED) {
-                throw new Error(`Lesson cannot be signed up for in status: ${lesson.status}`);
-            }
-            if (lesson.appointedDateTime <= new Date()) {
-                throw new Error(`Cannot sign up for a lesson whose time has passed.`);
-            }
+            if (!lesson) {
+                throw new appError(
+                  `Lesson ${lessonId} not found`,
+                  404,
+                  'LESSON_NOT_FOUND',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
+              if (lesson.status !== LESSON_STATUS.CREATED) {
+                throw new appError(
+                  `Lesson ${lessonId} is in an invalid status: ${lesson.status}`,
+                  400,
+                  'INVALID_LESSON_STATUS',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
+              if (lesson.appointedDateTime <= new Date()) {
+                throw new appError(
+                  `Cannot sign up for past lesson ${lessonId}`,
+                  400,
+                  'PAST_LESSON',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
     
             // Check tutee lesson count
             const signedUpCount = await sequelize.models.TuteeLesson.count({
@@ -646,8 +666,14 @@ module.exports = (sequelize) => {
             });
     
             if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
-                throw new Error(`Tutee ${tuteeUserId} has reached the maximum limit of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} active future lessons.`);
-            }
+                throw new appError(
+                  `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
+                  409,
+                  'TUTEE_LIMIT_REACHED',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
     
             // Check lesson capacity
             const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
@@ -656,8 +682,14 @@ module.exports = (sequelize) => {
             });
     
             if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
-                throw new Error(`Lesson is full. Maximum capacity of ${MAX_TUTEES_PER_LESSON} reached.`);
-            }
+                throw new appError(
+                  `Lesson ${lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
+                  409,
+                  'LESSON_FULL',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
     
             // Check if already enrolled
             const existingSignup = await sequelize.models.TuteeLesson.findOne({
@@ -669,8 +701,14 @@ module.exports = (sequelize) => {
             });
     
             if (existingSignup) {
-                throw new Error(`Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}.`);
-            }
+                throw new appError(
+                  `Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}`,
+                  400,
+                  'ALREADY_SIGNED_UP',
+                  'LessonModel:signUpTutee'
+                );
+              }
+              
     
             // Create new enrollment
             await sequelize.models.TuteeLesson.create({
@@ -707,9 +745,33 @@ module.exports = (sequelize) => {
         const transaction = await sequelize.transaction();
         try {
             const lesson = await Lesson.findByPk(lessonId, { transaction });
-            if (!lesson) { throw new Error('Lesson not found'); }
-            if (lesson.status !== LESSON_STATUS.CREATED) { throw new Error(`Lesson cancellation not allowed in status: ${lesson.status}`); }
-            if (lesson.appointedDateTime <= new Date()) { throw new Error(`Cannot cancel a lesson whose time has passed.`); }
+            if (!lesson) {
+                throw new appError(
+                  `Lesson ${lessonId} not found`,
+                  404,
+                  'LESSON_NOT_FOUND',
+                  'LessonModel:handleTuteeCancellation'
+                );
+              }
+              
+              if (lesson.status !== LESSON_STATUS.CREATED) {
+                throw new appError(
+                  `Cannot cancel lesson ${lessonId} in status ${lesson.status}`,
+                  400,
+                  'INVALID_CANCEL_STATUS',
+                  'LessonModel:handleTuteeCancellation'
+                );
+              }
+              
+              if (lesson.appointedDateTime <= new Date()) {
+                throw new appError(
+                  `Lesson ${lessonId} time has already passed`,
+                  400,
+                  'PAST_LESSON_CANCEL',
+                  'LessonModel:handleTuteeCancellation'
+                );
+              }
+              
 
             const signup = await sequelize.models.TuteeLesson.findOne({
                 where: {
@@ -719,7 +781,15 @@ module.exports = (sequelize) => {
                 transaction
             });
 
-            if (!signup) { throw new Error(`Tutee ${tuteeUserId} is not signed up for lesson ${lessonId}.`); }
+            if (!signup) {
+                throw new appError(
+                  `Tutee ${tuteeUserId} is not enrolled in lesson ${lessonId}`,
+                  404,
+                  'NOT_ENROLLED',
+                  'LessonModel:handleTuteeCancellation'
+                );
+              }
+              
 
             await signup.destroy({ transaction });
             await transaction.commit();
