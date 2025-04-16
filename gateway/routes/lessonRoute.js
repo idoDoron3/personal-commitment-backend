@@ -113,6 +113,43 @@ router.get("/tutor-upcoming-lessons", authenticateToken, (req, res) =>
 
 /**
  * @swagger
+ * /lessons/edit:
+ *   patch:
+ *     summary: Edit an existing lesson (Tutor only)
+ *     tags: [Lessons]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lessonId
+ *             properties:
+ *               lessonId:
+ *                 type: integer
+ *               description:
+ *                 type: string
+ *               format:
+ *                 type: string
+ *                 enum: [online, in-person]
+ *               locationOrLink:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Lesson updated successfully
+ *       400:
+ *         description: Invalid input or unauthorized update
+ *       404:
+ *         description: Lesson not found
+ */
+router.patch("/edit", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/edit")
+);
+
+
+/**
+ * @swagger
  * /lessons/tutor-summary-pending-lessons:
  *   get:
  *     summary: Get all summary pending lessons of tutor
@@ -265,7 +302,7 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *       200:
  *         description: List of available lessons
  */
-router.get("/available", authenticateToken, (req, res) =>
+router.post("/available", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/available")
 );
 

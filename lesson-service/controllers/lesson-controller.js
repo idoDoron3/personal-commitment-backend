@@ -59,6 +59,24 @@ exports.cancelLesson = async (req, res, next) => {
   }
 };
 
+exports.editLesson = async (req, res, next) => {
+  try {
+    const tutorUserId = req.userId;
+    const lesson = await lessonService.editLesson({
+      ...req.validatedBody,
+      tutorUserId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Lesson updated successfully',
+      data: { lesson }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 exports.getAmountOfApprovedLessons = async (req, res, next) => {
   try {
@@ -104,6 +122,27 @@ exports.getLessonsOfTutor = async (req, res, next) => {
 //
 // *Tutee
 //
+/**
+ * @desc    Get available lessons filtered by subject(s)
+ * @route   POST /lessons/available
+ * @access  Public
+ */
+exports.getAvailableLessonsBySubject = async (req, res, next) => {
+  try {
+    const { subjects } = req.validatedBody;
+    const lessons = await lessonService.getAvailableLessons(subjects);
+    console.log("Received subjects:", subjects);
+
+    res.status(200).json({
+      success: true,
+      message: 'Available lessons retrieved successfully',
+      data: { lessons }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 // TODO: amit: I didnt check yet this fucntion throw the layers because enrollToLesson is not implemented yet
 /**
@@ -186,15 +225,19 @@ exports.getLessonsOfTutee = async (req, res, next) => {
 
 /**
  * @desc    Enroll a tutee in a lesson
+ * @param   {lessonId} - The lessonId
  * @route   POST /lessons/enroll
  * @access  Private (Tutee only)
  */
 exports.enrollToLesson = async (req, res, next) => {
   try {
     const userId = req.userId;
+    const tuteeFullName = req.userFullName;
+
     const enrollment = await lessonService.enrollToLesson({
       ...req.validatedBody,
-      tuteeId: userId
+      tuteeId: userId,
+      tuteeFullName: tuteeFullName
     });
 
     res.status(200).json({
@@ -207,28 +250,30 @@ exports.enrollToLesson = async (req, res, next) => {
   }
 };
 
+
 /**
  * @desc    Withdraw a tutee from a lesson
+ * @param   {lessonId} - The lessonId
  * @route   DELETE /lessons/withdraw
  * @access  Private (Tutee only)
  */
 exports.withdrawFromLesson = async (req, res, next) => {
   try {
-    const userId = req.userId;
-    const withdrawal = await lessonService.withdrawFromLesson({
-      ...req.validatedBody,
-      tuteeId: userId
-    });
+    const tuteeId = req.userId;
+    const { lessonId } = req.validatedBody;
+
+    const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeId);
 
     res.status(200).json({
       success: true,
       message: 'Withdrawn from lesson successfully',
-      data: { withdrawal }
+      data: { lesson: updatedLesson }
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 /**
  * @desc    Get all available lessons

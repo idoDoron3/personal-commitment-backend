@@ -8,6 +8,9 @@ const {
     enrollLessonSchema,
     withdrawLessonSchema,
     cancelLessonSchema,
+    getAvailableLessonsBySubjectSchema,
+    editLessonSchema
+
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
 
@@ -57,6 +60,14 @@ router.get(
     lessonController.getLessonsOfTutor
 );
 
+router.patch(
+    "/edit",
+    extractUserInfo,
+    validateRole("mentor"),
+    validateBody(editLessonSchema),
+    lessonController.editLesson
+);
+
 //
 // TUTEE ROUTES
 //
@@ -76,7 +87,7 @@ router.get(
     lessonController.getLessonsOfTutee
 );
 
-
+// TODO: Amit: need to implement this route
 // router.patch(
 //     "/upload-lesson-summary",
 //     extractUserInfo,
@@ -87,11 +98,11 @@ router.get(
 
 
 
-
-// Enroll in a lesson
+// Enroll to a lesson
 router.post(
     "/enroll",
     extractUserInfo,
+    validateRole('student'),
     validateBody(enrollLessonSchema),
     lessonController.enrollToLesson
 );
@@ -100,16 +111,20 @@ router.post(
 router.delete(
     "/withdraw",
     extractUserInfo,
+    validateRole('student'),
     validateBody(withdrawLessonSchema),
     lessonController.withdrawFromLesson
 );
 
-// Get all lessons a tutee is enrolled in
-// ? check if need to change the get request because of the body used to send data instead of the URL
-// router.get("/tutee/:tuteeId", lessonController.getTuteeLessons);
+// Get all available lessons by subject
+router.post(
+    "/available",
+    extractUserInfo,
+    validateRole('student'),
+    validateBody(getAvailableLessonsBySubjectSchema),
+    lessonController.getAvailableLessonsBySubject
+);
 
-// Get all available lessons (with optional query filter)
-// ? check if need to change the get request because of the body used to send data instead of the URL
-router.get("/available", lessonController.getAvailableLessons);
+
 
 module.exports = router;

@@ -94,27 +94,82 @@ const cancelLessonSchema = Joi.object({
             'number.integer': 'Lesson ID must be an integer',
             'any.required': 'Lesson ID is required'
         }),
+
+    // Tutor ID validation
+    tutorUserId: Joi.string()
+        .required()
+        .messages({
+            'string.empty': 'User ID cannot be empty',
+            'any.required': 'User ID is required'
+        })
 });
 
-// const uploadLessonSummarySchema = Joi.object({
-//     lessonId: Joi.number()
-//         .integer()
-//         .required()
-//         .messages({
-//             'number.base': 'Lesson ID must be a number',
-//             'number.integer': 'Lesson ID must be an integer',
-//             'any.required': 'Lesson ID is required'
-//         }),
-//     summary: Joi.string()
-//         .required()
-//         .messages({
-//             'string.empty': 'Summary cannot be empty',
-//             'any.required': 'Summary is required'
-//         })
-// });
+const editLessonSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'number.integer': 'Lesson ID must be an integer',
+            'any.required': 'Lesson ID is required',
+        }),
+    description: Joi.string()
+        .max(100)
+        .allow(null),
+    format: Joi.string()
+        .valid('online', 'in-person')
+        .allow(null),
+    locationOrLink: Joi.string()
+        .max(140)
+        .allow(null)
+});
+
+const getLessonsByTutorSchema = Joi.object({
+    tutorUserId: Joi.string()
+        .required()
+        .messages({
+            'string.empty': 'User ID cannot be empty',
+            'any.required': 'User ID is required'
+        })
+});
+
+// Tutee enrollment validation
+const enrollLessonSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'any.required': 'Lesson ID is required'
+        })
+});
+
+// Tutee withdrawal validation
+const withdrawLessonSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'number.integer': 'Lesson ID must be an integer',
+            'any.required': 'Lesson ID is required'
+        })
+});
+
+// check if need to add strings also to the schema: Itay
+// Get all available lessons by subject for tutee (can be empty)
+const getAvailableLessonsBySubjectSchema = Joi.object({
+    subjects: Joi.array().items(Joi.string()).optional()
+});
+
 
 
 module.exports = {
     createLessonSchema,
     cancelLessonSchema,
+    getLessonsByTutorSchema,
+    getAvailableLessonsBySubjectSchema,
+    enrollLessonSchema,
+    withdrawLessonSchema,
+    editLessonSchema
 };
