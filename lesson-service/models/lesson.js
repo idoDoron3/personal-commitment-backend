@@ -254,6 +254,133 @@ module.exports = (sequelize) => {
             }
         }
 
+        // Static method for Tutee to sign up for a lesson
+        static async signUpTutee(lessonId, tuteeUserId, tuteeFullName) {
+            const transaction = await sequelize.transaction();
+          
+            try {
+              const lesson = await Lesson.findByPk(lessonId, {
+                transaction,
+                lock: transaction.LOCK.UPDATE
+              });
+          
+              if (!lesson) {
+                throw new appError(
+                  `Lesson ${lessonId} not found`,
+                  404,
+                  'LESSON_NOT_FOUND',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              if (lesson.status !== LESSON_STATUS.CREATED) {
+                throw new appError(
+                  `Lesson ${lessonId} is in an invalid status: ${lesson.status}`,
+                  400,
+                  'INVALID_LESSON_STATUS',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              if (lesson.appointedDateTime <= new Date()) {
+                throw new appError(
+                  `Cannot sign up for past lesson ${lessonId}`,
+                  400,
+                  'PAST_LESSON',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              const signedUpCount = await sequelize.models.TuteeLesson.count({
+                where: { tutee_user_id: tuteeUserId },
+                include: [{
+                  model: sequelize.models.Lesson,
+                  as: 'lesson',
+                  where: {
+                    status: LESSON_STATUS.CREATED,
+                    appointedDateTime: { [Op.gte]: new Date() }
+                  },
+                  required: true
+                }],
+                transaction
+              });
+          
+              if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
+                throw new appError(
+                  `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
+                  409,
+                  'TUTEE_LIMIT_REACHED',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
+                where: { lesson_id: lessonId },
+                transaction
+              });
+          
+              if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
+                throw new appError(
+                  `Lesson ${lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
+                  409,
+                  'LESSON_FULL',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              const existingSignup = await sequelize.models.TuteeLesson.findOne({
+                where: {
+                  lesson_id: lessonId,
+                  tutee_user_id: tuteeUserId
+                },
+                transaction
+              });
+          
+              if (existingSignup) {
+                throw new appError(
+                  `Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}`,
+                  400,
+                  'ALREADY_SIGNED_UP',
+                  'LessonModel:signUpTutee'
+                );
+              }
+          
+              await sequelize.models.TuteeLesson.create({
+                lessonId,
+                tuteeUserId,
+                tuteeFullName,
+                presence: false
+              }, { transaction });
+          
+              await transaction.commit();
+          
+              const updatedLesson = await Lesson.findByPk(lessonId, {
+                include: [
+                  {
+                    model: sequelize.models.TuteeLesson,
+                    as: 'attendanceRecords',
+                    attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
+                  }
+                ]
+              });
+          
+              return updatedLesson;
+          
+            } catch (error) {
+              await transaction.rollback();
+              console.error('Error signing up tutee:', error);
+          
+              // fallback error when something unexpected like a race condition occurs
+              throw new appError(
+                'Could not enroll right now. Please try again.',
+                409,
+                'SIGNUP_CONFLICT',
+                'LessonModel:signUpTutee'
+              );
+            }
+          }
+          
+        // Static method for Tutee to cancel their enrollment in a lesson          
         static async handleTuteeCancellation(lessonId, tuteeUserId) {
             const transaction = await sequelize.transaction();
             try {
@@ -514,159 +641,6 @@ module.exports = (sequelize) => {
             }
         }
     });
-
-    // Class methods for tutee sign-up
-    Lesson.signUpTutee = async function (lessonId, tuteeUserId, tuteeFullName) {
-        const maxRetries = 3;
-        let attempts = 0;
-
-        // Retry loop to handle race conditions (e.g., two tutees signing up at once)
-        while (attempts < maxRetries) {
-            const transaction = await sequelize.transaction();
-            try {
-                attempts++;
-
-                // Lock the lesson row to prevent concurrent modifications
-                const lesson = await Lesson.findByPk(lessonId, {
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-
-                if (!lesson) {
-                    throw new appError(
-                        `Lesson ${lessonId} not found`,
-                        404,
-                        'LESSON_NOT_FOUND',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                if (lesson.status !== LESSON_STATUS.CREATED) {
-                    throw new appError(
-                        `Lesson ${lessonId} is in an invalid status: ${lesson.status}`,
-                        400,
-                        'INVALID_LESSON_STATUS',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                if (lesson.appointedDateTime <= new Date()) {
-                    throw new appError(
-                        `Cannot sign up for past lesson ${lessonId}`,
-                        400,
-                        'PAST_LESSON',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                // Check how many active lessons the tutee already has
-                const signedUpCount = await sequelize.models.TuteeLesson.count({
-                    where: { tutee_user_id: tuteeUserId },
-                    include: [{
-                        model: sequelize.models.Lesson,
-                        as: 'lesson',
-                        where: {
-                            status: LESSON_STATUS.CREATED,
-                            appointedDateTime: { [Op.gte]: new Date() }
-                        },
-                        required: true
-                    }],
-                    transaction
-                });
-
-                if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
-                    throw new appError(
-                        `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
-                        409,
-                        'TUTEE_LIMIT_REACHED',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                // Check how many tutees are already signed up to the lesson
-                const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
-                    where: { lesson_id: lessonId },
-                    transaction
-                });
-
-                if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
-                    throw new appError(
-                        `Lesson ${lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
-                        409,
-                        'LESSON_FULL',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                // Prevent duplicate sign-up
-                const existingSignup = await sequelize.models.TuteeLesson.findOne({
-                    where: {
-                        lesson_id: lessonId,
-                        tutee_user_id: tuteeUserId
-                    },
-                    transaction
-                });
-
-                if (existingSignup) {
-                    throw new appError(
-                        `Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}`,
-                        400,
-                        'ALREADY_SIGNED_UP',
-                        'LessonModel:signUpTutee'
-                    );
-                }
-
-                // Create new enrollment record
-                await sequelize.models.TuteeLesson.create({
-                    lessonId,
-                    tuteeUserId,
-                    tuteeFullName,
-                    presence: false
-                }, { transaction });
-
-                await transaction.commit();
-
-                // Fetch the updated lesson with attendance records
-                const updatedLesson = await Lesson.findByPk(lessonId, {
-                    include: [
-                        {
-                            model: sequelize.models.TuteeLesson,
-                            as: 'attendanceRecords',
-                            attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
-                        }
-                    ]
-                });
-
-                return updatedLesson;
-
-            } catch (error) {
-                await transaction.rollback();
-
-                // Retry if a race condition caused a temporary overbook
-                const isRaceCondition =
-                    error instanceof appError && error.type === 'LESSON_FULL';
-
-                if (isRaceCondition && attempts < maxRetries) {
-                    console.warn(
-                        `Race condition detected on lesson ${lessonId}, retrying attempt ${attempts}...`
-                    );
-                    continue;
-                }
-
-                console.error('Error signing up tutee:', error);
-                throw error;
-            }
-        }
-
-        // Final fallback if all attempts fail
-        throw new appError(
-            `Failed to enroll tutee after ${maxRetries} attempts`,
-            500,
-            'ENROLL_RETRY_FAILED',
-            'LessonModel:signUpTutee'
-        );
-    };
-
 
     return Lesson;
 };
