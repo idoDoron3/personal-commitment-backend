@@ -177,38 +177,45 @@ module.exports = (sequelize) => {
             }
         }
 
-        static async getAvailableLessons(subjects = []) {
+        static async getAvailableLessons(subject, grade, level, tuteeId) {
             try {
-                const now = new Date();
-
-                const queryOptions = {
-                    where: {
-                        status: LESSON_STATUS.CREATED,
-                        appointedDateTime: {
-                            [Op.gte]: now
-                        }
-                    },
-                    order: [['appointedDateTime', 'ASC']],
-                    include: [
-                        {
-                            model: sequelize.models.TuteeLesson,
-                            as: 'attendanceRecords',
-                            attributes: ['tutee_user_id', 'tutee_full_name'] // only what's needed
-                        }
-                    ]
-                };
-
-                if (subjects.length > 0) {
-                    queryOptions.where.subjectName = { [Op.in]: subjects };
-                }
-
-                const lessons = await this.findAll(queryOptions);
-                return lessons;
+              const now = new Date();
+          
+              const lessons = await this.findAll({
+                where: {
+                  subjectName: subject,
+                  grade,
+                  level,
+                  status: LESSON_STATUS.CREATED,
+                  appointedDateTime: {
+                    [Op.gte]: now
+                  }
+                },
+                order: [['appointedDateTime', 'ASC']],
+                include: [
+                  {
+                    model: sequelize.models.TuteeLesson,
+                    as: 'enrolledTutees', // ✅ use the correct alias from association
+                    attributes: ['tuteeUserId'],
+                  }
+                ]
+              });
+          
+              const filteredLessons = lessons.filter(lesson => {
+                const attendees = lesson.enrolledTutees || []; // ✅ match alias here too
+                const alreadyEnrolled = attendees.some(t => t.tuteeUserId === tuteeId);
+                const isFull = attendees.length >= MAX_TUTEES_PER_LESSON;
+                return !alreadyEnrolled && !isFull;
+              });
+          
+              return filteredLessons;
             } catch (error) {
-                console.error('Error in Lesson.getAvailableLessons:', error);
-                throw error;
+              console.error('Error in Lesson.getAvailableLessons:', error);
+              throw new appError('Error fetching available lessons', 500, 'AVAILABLE_FETCH_ERROR');
             }
-        }
+          }
+          
+          
 
         static async editLessonByTutor(lessonId, tutorUserId, updates) {
             const transaction = await sequelize.transaction();

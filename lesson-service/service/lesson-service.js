@@ -228,37 +228,40 @@ const withdrawFromLesson = async (lessonId, tuteeId) => {
 
 
 /**
- * Get all available lessons, optionally filtered by subject(s)
- * @param {Array<string>} [subjects] - Optional array of subject names to filter
- * @returns {Promise<Array>} Array of available lessons
+ * Get available lessons by subject, grade, and level
+ * @param {Object} filterData
+ * @param {string} filterData.subject - Subject name
+ * @param {string|number} filterData.grade - Grade level
+ * @param {string} filterData.level - Skill level
+ * @param {string} filterData.tuteeId - User ID from token
+ * @returns {Promise<Array>} Filtered lessons
  */
-const getAvailableLessons = async (subjects) => {
+const getAvailableLessons = async ({ subject, grade, level, tuteeId }) => {
     try {
-        // ✅ Validate subjects
-        if (subjects && (!Array.isArray(subjects) || !subjects.every(sub => typeof sub === 'string'))) {
-            throw new appError(
-                'Invalid subjects: must be an array of strings',
-                400,
-                'INVALID_SUBJECTS',
-                'lesson-service:getAvailableLessons'
-            );
-        }
-
-        // ✅ Call model-level method
-        return await Lesson.getAvailableLessons(subjects);
+      if (!subject || !grade || !level || !tuteeId) {
+        throw new appError(
+          'Missing required filters for available lessons',
+          400,
+          'INVALID_FILTERS',
+          'lesson-service:getAvailableLessons'
+        );
+      }
+  
+      return await Lesson.getAvailableLessons(subject, grade, level, tuteeId);
     } catch (error) {
-        // console.error('Error in getAvailableLessons service:', error);
-
-        if (error.type) {
-            throw error;
-        }
-
-        const serviceError = new Error('Failed to get available lessons');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
+      if (error instanceof appError) {
+        throw error;
+      }
+  
+      throw new appError(
+        'Failed to get available lessons',
+        500,
+        'GET_AVAILABLE_ERROR',
+        'lesson-service:getAvailableLessons'
+      );
     }
-};
+  };
+  
 
 
 

@@ -8,7 +8,7 @@ const {
     enrollLessonSchema,
     withdrawLessonSchema,
     cancelLessonSchema,
-    getAvailableLessonsBySubjectSchema,
+    availableLessonsSchema,
     editLessonSchema
 
 } = require('../validators/lesson-validator');
@@ -121,7 +121,7 @@ router.post(
     "/available",
     extractUserInfo,
     validateRole('student'),
-    validateBody(getAvailableLessonsBySubjectSchema),
+    validateBody(availableLessonsSchema),
     lessonController.getAvailableLessonsBySubject
 );
 

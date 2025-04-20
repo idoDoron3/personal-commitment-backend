@@ -129,9 +129,15 @@ exports.getLessonsOfTutor = async (req, res, next) => {
  */
 exports.getAvailableLessonsBySubject = async (req, res, next) => {
   try {
-    const { subjects } = req.validatedBody;
-    const lessons = await lessonService.getAvailableLessons(subjects);
-    console.log("Received subjects:", subjects);
+    const { subjectName, grade, level } = req.validatedBody;
+    const tuteeId = req.userId;
+
+    const lessons = await lessonService.getAvailableLessons({
+      subject: subjectName,
+      grade,
+      level,
+      tuteeId,
+    });
 
     res.status(200).json({
       success: true,
@@ -142,6 +148,7 @@ exports.getAvailableLessonsBySubject = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // TODO: amit: I didnt check yet this fucntion throw the layers because enrollToLesson is not implemented yet
@@ -268,26 +275,6 @@ exports.withdrawFromLesson = async (req, res, next) => {
       success: true,
       message: 'Withdrawn from lesson successfully',
       data: { lesson: updatedLesson }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
-/**
- * @desc    Get all available lessons
- * @route   GET /lessons/available
- * @access  Public
- */
-exports.getAvailableLessons = async (req, res, next) => {
-  try {
-    const lessons = await lessonService.getAvailableLessons();
-
-    res.status(200).json({
-      success: true,
-      message: 'Available lessons retrieved successfully',
-      data: { lessons }
     });
   } catch (err) {
     next(err);

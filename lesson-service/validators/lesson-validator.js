@@ -158,17 +158,50 @@ const withdrawLessonSchema = Joi.object({
 
 // check if need to add strings also to the schema: Itay
 // Get all available lessons by subject for tutee (can be empty)
-const getAvailableLessonsBySubjectSchema = Joi.object({
-    subjects: Joi.array().items(Joi.string()).optional()
-});
-
+const availableLessonsSchema = Joi.object({
+    subjectName: Joi.string()
+        .min(1)
+        .max(20)
+        .required()
+        .messages({
+            'string.empty': 'Subject name cannot be empty',
+            'string.min': 'Subject name must be at least {#limit} character long',
+            'string.max': 'Subject name cannot be longer than {#limit} characters',
+            'any.required': 'Subject name is required'
+        }),
+  
+    // Grade validation
+    grade: Joi.string()
+        .min(1)
+        .max(10)
+        .required()
+        .messages({
+            'string.empty': 'Grade cannot be empty',
+            'string.min': 'Grade must be at least {#limit} character long',
+            'string.max': 'Grade cannot be longer than {#limit} characters',
+            'any.required': 'Grade is required'
+        }),
+  
+    // Level validation
+    level: Joi.string()
+        .min(1)
+        .max(10)
+        .required()
+        .messages({
+            'string.empty': 'Level cannot be empty',
+            'string.min': 'Level must be at least {#limit} character long',
+            'string.max': 'Level cannot be longer than {#limit} characters',
+            'any.required': 'Level is required'
+        })
+  });
+  
 
 
 module.exports = {
     createLessonSchema,
     cancelLessonSchema,
     getLessonsByTutorSchema,
-    getAvailableLessonsBySubjectSchema,
+    availableLessonsSchema,
     enrollLessonSchema,
     withdrawLessonSchema,
     editLessonSchema
