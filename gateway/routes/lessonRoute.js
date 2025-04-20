@@ -1143,4 +1143,55 @@ router.post("/available", authenticateToken, (req, res) =>
 
 );
 
+/**
+ * @swagger
+ * /lessons/review:
+ *   post:
+ *     summary: Add a review for a completed lesson
+ *     tags: [Lessons]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lessonId
+ *               - clarity
+ *               - understanding
+ *               - focus
+ *               - helpful
+ *             properties:
+ *               lessonId:
+ *                 type: integer
+ *               clarity:
+ *                 type: string
+ *                 enum: ['1', '2', '3', '4', '5']
+ *               understanding:
+ *                 type: string
+ *                 enum: ['1', '2', '3', '4', '5']
+ *               focus:
+ *                 type: string
+ *                 enum: ['1', '2', '3', '4', '5']
+ *               helpful:
+ *                 type: string
+ *                 enum: ['1', '2', '3', '4', '5']
+ *     responses:
+ *       201:
+ *         description: Review added successfully
+ *       400:
+ *         description: Validation error or review already exists
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *       403:
+ *         description: Forbidden - tutee didn't attend the lesson
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/review", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/review")
+);
+
 module.exports = router;

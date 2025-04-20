@@ -195,7 +195,28 @@ const availableLessonsSchema = Joi.object({
         })
   });
   
-
+  const addReviewSchema = Joi.object({
+    lessonId: Joi.number()
+      .integer()
+      .required()
+      .messages({
+        'number.base': 'Lesson ID must be a number',
+        'any.required': 'Lesson ID is required'
+      }),
+    clarity: Joi.string()
+      .valid('1', '2', '3', '4', '5')
+      .required(),
+    understanding: Joi.string()
+      .valid('1', '2', '3', '4', '5')
+      .required(),
+    focus: Joi.string()
+      .valid('1', '2', '3', '4', '5')
+      .required(),
+    helpful: Joi.string()
+      .valid('1', '2', '3', '4', '5')
+      .required()
+  });
+  
 
 module.exports = {
     createLessonSchema,
@@ -204,5 +225,6 @@ module.exports = {
     availableLessonsSchema,
     enrollLessonSchema,
     withdrawLessonSchema,
-    editLessonSchema
+    editLessonSchema,
+    addReviewSchema
 };

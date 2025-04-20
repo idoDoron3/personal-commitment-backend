@@ -1,8 +1,7 @@
-const { Lesson, Tutor } = require('../models');
+const { Lesson, Tutor,Review,TuteeLesson } = require('../models');
 const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
 const { Op } = require('sequelize');
-
 /**
  * Create a new lesson
  * @param {Object} lessonData - The validated lesson data
@@ -263,6 +262,78 @@ const getAvailableLessons = async ({ subject, grade, level, tuteeId }) => {
   };
   
 
+/**
+ * Add a review for a completed lesson
+ * @param {Object} reviewData
+ * @param {number} reviewData.lessonId
+ * @param {string} reviewData.tuteeUserId
+ * @param {string} reviewData.clarity
+ * @param {string} reviewData.understanding
+ * @param {string} reviewData.focus
+ * @param {string} reviewData.helpful
+ */
+const addReview = async ({
+  lessonId,
+  tuteeUserId,
+  clarity,
+  understanding,
+  focus,
+  helpful
+}) => {
+  try {
+    const lesson = await Lesson.findByPk(lessonId);
+    if (!lesson) {
+      throw new appError('Lesson not found', 404, 'LESSON_NOT_FOUND');
+    }
+
+    if (lesson.status !== 'completed' && lesson.status !== 'approved') {
+      throw new appError('Cannot review a lesson that is not completed', 400, 'INVALID_LESSON_STATE');
+    }
+
+    // Check that tutee was enrolled in this lesson
+    const enrolled = await TuteeLesson.findOne({
+      where: {
+        lesson_id: lessonId,
+        tutee_user_id: tuteeUserId
+      }
+    });
+
+    if (!enrolled) {
+      throw new appError('You are not enrolled in this lesson', 403, 'NOT_ENROLLED');
+    }
+
+    // Check if review already exists
+    const existingReview = await Review.findOne({
+      where: {
+        lessonId,
+        tuteeUserId
+      }
+    });
+
+    if (existingReview) {
+      throw new appError('Review already submitted for this lesson', 409, 'REVIEW_EXISTS');
+    }
+
+    // Create the review
+    const newReview = await Review.create({
+      lessonId,
+      tuteeUserId,
+      clarity,
+      understanding,
+      focus,
+      helpful
+    });
+
+    return newReview;
+  } catch (error) {
+    if (error instanceof appError) {
+      throw error;
+    }
+    console.error('Error in addReview service:', error);
+    throw new appError('Failed to add review', 500, 'ADD_REVIEW_ERROR');
+  }
+};
+
 
 
 
@@ -280,5 +351,6 @@ module.exports = {
     getAvailableLessons,
     getAmountOfApprovedLessons,
     editLesson,
+    addReview
 };
 

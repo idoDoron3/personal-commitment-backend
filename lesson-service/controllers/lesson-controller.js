@@ -280,3 +280,23 @@ exports.withdrawFromLesson = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.addReview = async (req, res, next) => {
+  try {
+    const tuteeId = req.userId; // From JWT via middleware
+    const reviewData = {
+      ...req.validatedBody,
+      tuteeUserId: tuteeId
+    };
+
+    const result = await lessonService.addReview(reviewData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Review added successfully',
+      data: { review: result }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
