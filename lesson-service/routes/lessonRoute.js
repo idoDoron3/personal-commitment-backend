@@ -9,7 +9,8 @@ const {
     withdrawLessonSchema,
     cancelLessonSchema,
     getAvailableLessonsBySubjectSchema,
-    editLessonSchema
+    editLessonSchema,
+    uploadLessonReportSchema
 
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
@@ -75,7 +76,7 @@ router.patch(
 router.get(
     "/tutee-upcoming-lessons",
     extractUserInfo,
-    validateRole('tutee'),
+    validateRole('student'),
     lessonController.getLessonsOfTutee
 );
 
@@ -83,18 +84,17 @@ router.get(
 router.get(
     "/tutee-review-pending-lessons",
     extractUserInfo,
-    validateRole('tutee'),
+    validateRole('student'),
     lessonController.getLessonsOfTutee
 );
 
-// TODO: Amit: need to implement this route
-// router.patch(
-//     "/upload-lesson-summary",
-//     extractUserInfo,
-//     validateRole('tutee'),
-//     validateBody(uploadLessonSummarySchema),
-//     lessonController.uploadLessonSummary
-// );
+router.patch(
+    "/upload-lesson-report",
+    extractUserInfo,
+    validateRole('mentor'),
+    validateBody(uploadLessonReportSchema),
+    lessonController.uploadLessonReport
+);
 
 
 

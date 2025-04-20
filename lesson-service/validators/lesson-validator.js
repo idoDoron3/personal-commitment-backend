@@ -1,6 +1,7 @@
 // validators/lesson-validator.js
 const Joi = require('joi');
 
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 const createLessonSchema = Joi.object({
     // Subject Name validation
@@ -55,11 +56,13 @@ const createLessonSchema = Joi.object({
     appointedDateTime: Joi.date()
         .iso()
         .min('now')
+        .max(Date.now() + FOURTEEN_DAYS_MS)
         .required()
         .messages({
             'date.base': 'Appointed date/time must be a valid date',
             'date.format': 'Appointed date/time must be in ISO format',
             'date.min': 'Appointed date/time must be in the future',
+            'date.max': 'Appointed date/time cannot be more than 14 days in the future',
             'any.required': 'Appointed date/time is required'
         }),
 
@@ -93,14 +96,6 @@ const cancelLessonSchema = Joi.object({
             'number.base': 'Lesson ID must be a number',
             'number.integer': 'Lesson ID must be an integer',
             'any.required': 'Lesson ID is required'
-        }),
-
-    // Tutor ID validation
-    tutorUserId: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'User ID cannot be empty',
-            'any.required': 'User ID is required'
         })
 });
 
@@ -162,6 +157,48 @@ const getAvailableLessonsBySubjectSchema = Joi.object({
     subjects: Joi.array().items(Joi.string()).optional()
 });
 
+const uploadLessonReportSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'number.integer': 'Lesson ID must be an integer',
+            'any.required': 'Lesson ID is required'
+        }),
+    lessonSummary: Joi.string()
+        .required()
+        .min(10)
+        .max(1000)
+        .messages({
+            'string.empty': 'Lesson summary cannot be empty',
+            'string.min': 'Lesson summary must be at least {#limit} characters long',
+            'string.max': 'Lesson summary cannot be longer than {#limit} characters',
+            'any.required': 'Lesson summary is required'
+        }),
+    tuteesPresence: Joi.array()
+        .items(
+            Joi.object({
+                tuteeUserId: Joi.string()
+                    .required()
+                    .messages({
+                        'string.base': 'Tutee ID must be a string',
+                        'any.required': 'Tutee ID is required'
+                    }),
+                presence: Joi.boolean()
+                    .required()
+                    .messages({
+                        'boolean.base': 'Presence must be a boolean value',
+                        'any.required': 'Presence status is required'
+                    })
+            })
+        )
+        .required()
+        .messages({
+            'array.base': 'Tutees presence must be an array',
+            'any.required': 'Tutees presence is required'
+        })
+});
 
 
 module.exports = {
@@ -171,5 +208,6 @@ module.exports = {
     getAvailableLessonsBySubjectSchema,
     enrollLessonSchema,
     withdrawLessonSchema,
-    editLessonSchema
+    editLessonSchema,
+    uploadLessonReportSchema
 };

@@ -19,10 +19,12 @@ exports.createLesson = async (req, res, next) => {
   try {
     const tutorUserId = req.userId; // Now available from middleware
     const tutorFullName = req.userFullName; // Now available from middleware
+    const tutorEmail = req.userEmail; // Now available from middleware
     const lesson = await lessonService.createLesson({
       ...req.validatedBody,
       tutorUserId,
-      tutorFullName
+      tutorFullName,
+      tutorEmail,
     });
 
     res.status(201).json({
@@ -43,8 +45,8 @@ exports.createLesson = async (req, res, next) => {
 exports.cancelLesson = async (req, res, next) => {
   try {
     const tutorUserId = req.userId;
-    const tutorFullName = req.userFullName;
-    const canceledLesson = await lessonService.cancelLesson({ ...req.validatedBody, tutorUserId });
+    const lessonId = req.validatedBody.lessonId;
+    const canceledLesson = await lessonService.cancelLesson(lessonId, tutorUserId);
 
     res.status(200).json({
       success: true,
@@ -58,6 +60,12 @@ exports.cancelLesson = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * @desc    Edit a lesson (tutor only)
+ * @route   PATCH /lessons/edit
+ * @access  Private (Tutor only)
+ */
 
 exports.editLesson = async (req, res, next) => {
   try {
@@ -78,6 +86,11 @@ exports.editLesson = async (req, res, next) => {
 };
 
 
+/**
+ * @desc    Get the amount of approved lessons (tutor only)
+ * @route   GET /lessons/amount-of-approved-lessons
+ * @access  Private (Tutor only)
+ */
 exports.getAmountOfApprovedLessons = async (req, res, next) => {
   try {
     const tutorUserId = req.userId;
@@ -103,10 +116,7 @@ exports.getLessonsOfTutor = async (req, res, next) => {
     const tutorUserId = req.userId;
     const lessonCategory = req.path.includes('summary-pending') ? 'summaryPending' : 'upcoming';
 
-    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutor({
-      tutorUserId,
-      lessonCategory
-    });
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutor(tutorUserId, lessonCategory);
 
     res.status(200).json({
       success: true,
@@ -155,10 +165,7 @@ exports.getLessonsOfTutee = async (req, res, next) => {
     const tuteeUserId = req.userId;
     const lessonCategory = req.path.includes('review-pending') ? 'reviewPending' : 'upcoming';
 
-    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee({
-      tuteeUserId,
-      lessonCategory
-    });
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee(tuteeUserId, lessonCategory);
 
     res.status(200).json({
       success: true,
@@ -170,35 +177,29 @@ exports.getLessonsOfTutee = async (req, res, next) => {
   }
 };
 
-// ! get My next Lessons tutoee
-// ! get My next Lessons tutor
-// ! get approved lessons tutor
-// ! get awaiting approval lessons tutor
-// ! get not approved lessons tutor - means the admin review the lesson and decided to not approve it
 
+/**
+ * @desc    Upload a lesson report (tutor only)
+ * @route   PATCH /lessons/upload-lesson-report
+ * @access  Private (Tutor only)
+ */
+exports.uploadLessonReport = async (req, res, next) => {
+  try {
+    const { lessonId, lessonSummary, tuteesPresence } = req.validatedBody;
+    const tutorUserId = req.userId;
 
+    const updatedLesson = await lessonService.uploadLessonReport(lessonId, lessonSummary, tuteesPresence, tutorUserId);
 
+    res.status(200).json({
+      success: true,
+      message: 'Lesson report uploaded successfully',
+      data: { updatedLesson }
+    });
 
-// ! Tutor:
-// ! 2 getLessonsOfTutor -----------------------------------------------------------------------------(Created/OccuredButNotCompleted): Hard
-// ! 3 getAmountOfApprovedLessons (returns int): Medium
-//  4 getAmountOfNotApprovedLessons (returns int) ------------------------------------------X
-//  5 getPendingLessons - completed/unattended
-// ! 6 createSummary -----------------------------------------------------------------------------,TutteesAtendncy, summary,: Hard
-// ! 7 addLinkOrLocationToLesson  : Easy (format, link\location) (onlinVSin-person)
-
-
-// ! Tutee:
-// ! 9 getLessonsOfTutee ----------------------------------------------------------------------------(upcoming/ ???): Hard
-// ! 10 getAvailableLessonsBySubject: Hard
-// ! 11 enrollToLesson: Medium
-// ! 12 withdrawFromLesson: Medium
-
-// 7, 10 ,11 ,12 Itay
-// 6  Amit 3 2 9
-
-
-
+  } catch (err) {
+    next(err);
+  }
+}
 
 // ! Admin: ------------------------------------------------------------- X
 // ! getLessonsByStatus
@@ -206,18 +207,10 @@ exports.getLessonsOfTutee = async (req, res, next) => {
 // ! getTotalCompletedLessons (returns int) ??
 
 
-
 // ! Periodical functions:
 // ! changeStatusFromCreatedToCanceledByDate
 // ! Notifictations
 
-
-
-
-// TODO:
-//? 1. by removing the tutors_table, ther are no option to keep tutor's score (if we dcide to implement it)
-//? 2. think about modfiying tutees table to have full_name instead of first_name and last_name
-//? 2.2 think about removing tutees table and use only tuteeLessons table with tuteeFullName column 
 
 //
 // TUTEE
@@ -225,20 +218,17 @@ exports.getLessonsOfTutee = async (req, res, next) => {
 
 /**
  * @desc    Enroll a tutee in a lesson
- * @param   {lessonId} - The lessonId
  * @route   POST /lessons/enroll
  * @access  Private (Tutee only)
  */
 exports.enrollToLesson = async (req, res, next) => {
   try {
-    const userId = req.userId;
+    const { lessonId } = req.validatedBody;
+    const tuteeUserId = req.userId;
     const tuteeFullName = req.userFullName;
+    const tuteeEmail = req.userEmail;
 
-    const enrollment = await lessonService.enrollToLesson({
-      ...req.validatedBody,
-      tuteeId: userId,
-      tuteeFullName: tuteeFullName
-    });
+    const enrollment = await lessonService.enrollToLesson(lessonId, tuteeUserId, tuteeFullName, tuteeEmail);
 
     res.status(200).json({
       success: true,
@@ -253,16 +243,15 @@ exports.enrollToLesson = async (req, res, next) => {
 
 /**
  * @desc    Withdraw a tutee from a lesson
- * @param   {lessonId} - The lessonId
  * @route   DELETE /lessons/withdraw
  * @access  Private (Tutee only)
  */
 exports.withdrawFromLesson = async (req, res, next) => {
   try {
-    const tuteeId = req.userId;
+    const tuteeUserId = req.userId;
     const { lessonId } = req.validatedBody;
 
-    const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeId);
+    const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeUserId);
 
     res.status(200).json({
       success: true,

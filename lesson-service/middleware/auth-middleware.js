@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const appError = require("../utils/errors/appError");
 
+// ? AMIT: in the future thinke about how to interact with admin user (role)
 /**
  * Extracts and verifies the user ID from a JWT token
  * @param {string} token - The JWT token to verify
@@ -20,20 +21,31 @@ const extractUserInfoFromToken = (token) => {
         const userInfo = {
             userId: decodedInfo.sub || decodedInfo.userId || decodedInfo.id,
             fullName: decodedInfo.fullName || decodedInfo.name,
-            role: decodedInfo.role
+            role: decodedInfo.role,
+            email: decodedInfo.email
         };
 
         if (!userInfo.userId) {
-            throw new appError("Token does not contain user ID", 403, "AuthenticationError", "Token Structure");
+            throw new appError("Token does not contain user ID", 403, "TOKEN_STRUCTURE_ERROR", "auth-middleware:extractUserInfo");
         }
 
+        if (!userInfo.fullName) {
+            throw new appError("Token does not contain full name", 403, "TOKEN_STRUCTURE_ERROR", "auth-middleware:extractUserInfo");
+        }
+
+        if (!userInfo.role) {
+            throw new appError("Token does not contain role", 403, "TOKEN_STRUCTURE_ERROR", "auth-middleware:extractUserInfo");
+        }
+
+        if (!userInfo.email) {
+            throw new appError("Token does not contain email", 403, "TOKEN_STRUCTURE_ERROR", "auth-middleware:extractUserInfo");
+        }
         return userInfo;
     } catch (error) {
-        // Re-throw appError instances, wrap others
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError("Invalid or expired token", 403, "AuthenticationError", "Token Verification");
+        throw new appError("Invalid or expired token", 403, "TOKEN_VERIFICATION_ERROR", "auth-middleware:extractUserInfo");
     }
 };
 
@@ -62,15 +74,14 @@ exports.extractUserInfo = (req, res, next) => {
         req.userId = userInfo.userId;
         req.userFullName = userInfo.fullName;
         req.userRole = userInfo.role;
-        // req.userEmail = userInfo.email;
+        req.userEmail = userInfo.email;
 
         next();
     } catch (error) {
-        // Pass appError instances directly, wrap others
         if (error instanceof appError) {
             next(error);
         } else {
-            next(new appError("Invalid or expired token", 403, "AuthenticationError", "Token Processing"));
+            next(new appError("Invalid or expired token", 403, "TOKEN_PROCESSING_ERROR", "auth-middleware:extractUserInfo"));
         }
     }
 }; 

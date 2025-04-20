@@ -42,6 +42,10 @@ module.exports = {
                 type: Sequelize.STRING(100),
                 allowNull: false
             },
+            tutor_email: {
+                type: Sequelize.STRING(100),
+                allowNull: false
+            },
             summary: {
                 type: Sequelize.TEXT,
                 allowNull: true

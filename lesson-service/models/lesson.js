@@ -34,54 +34,44 @@ module.exports = (sequelize) => {
         }
 
         // Static method for Tutor/System to cancel a lesson (in model layer)
-        static async cancelLesson(lessonId, options = {}) {
-            const transaction = options.transaction || await sequelize.transaction();
+        static async cancelLesson(lessonToCancel, enrolledTutees) {
+            const transaction = await sequelize.transaction();
             try {
-                // Find the lesson with lock to prevent race conditions
-                const lesson = await Lesson.findByPk(lessonId, {
-                    transaction,
-                    lock: transaction.LOCK.UPDATE,
-                    include: [{
-                        model: sequelize.models.TuteeLesson,
-                        as: 'enrolledTutees',
-                        attributes: ['tutee_user_id'] // Only need tutee_user_id for the deletion step
-                    }]
-                });
-                if (!lesson) {
-                    throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
-                }
-                lesson.status = LESSON_STATUS.CANCELED;
-                await lesson.save({ transaction });
+                lessonToCancel.status = LESSON_STATUS.CANCELED;
+                await lessonToCancel.save({ transaction });
 
                 // Get affected tutees before deleting their records
-                const affectedTutees = lesson.enrolledTutees.map(record => record.tutee_user_id);
+                const affectedTutees = enrolledTutees.map(record => record.tuteeUserId);
+
                 // Remove associated signups (TuteeLesson records)
                 await sequelize.models.TuteeLesson.destroy({
-                    where: { lesson_id: lessonId },
+                    where: { lessonId: lessonToCancel.lessonId },
                     transaction
                 });
-                // Commit the transaction if it was not passed in the options
-                if (!options.transaction) {
-                    await transaction.commit();
-                }
+
+                await transaction.commit();
                 return {
-                    lesson,
+                    lesson: lessonToCancel,
                     affectedTutees
                 };
             } catch (error) {
-                // Rollback the transaction if something goes wrong
-                if (!options.transaction && transaction) {
-                    await transaction.rollback();
+                await transaction.rollback();
+                if (error instanceof appError) {
+                    throw error;
                 }
-                if (error instanceof appError) { throw error; }
-                throw new appError(error.message, 500, 'Model Error', 'lesson-model:cancelLesson');
+                throw new appError(
+                    'Failed to cancel lesson',
+                    500,
+                    'CANCEL_ERROR',
+                    'lesson-model:cancelLesson'
+                );
             }
         }
 
         static async getLessonsOfTutor(tutorUserId, lessonCategory) {
             try {
                 const now = new Date();
-                const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                const THREE_DAYS_AGO = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000)); // 3 days ago
                 let whereClause = {
                     tutorUserId: tutorUserId
                 };
@@ -94,7 +84,7 @@ module.exports = (sequelize) => {
                 } else if (lessonCategory === 'summaryPending') {
                     whereClause.status = LESSON_STATUS.CREATED;
                     whereClause.appointedDateTime = {
-                        [Op.lt]: new Date(now.getTime() - ONE_DAY_IN_MS) // Past dates with 24-hour buffer
+                        [Op.lt]: THREE_DAYS_AGO // Older than 3 days
                     };
                 } else {
                     throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutor');
@@ -107,7 +97,7 @@ module.exports = (sequelize) => {
                         {
                             model: sequelize.models.TuteeLesson,
                             as: 'enrolledTutees',
-                            attributes: ['tutee_full_name']
+                            attributes: ['tuteeFullName', 'tuteeUserId']
                         }
                     ]
                 });
@@ -124,6 +114,7 @@ module.exports = (sequelize) => {
         static async getLessonsOfTutee(tuteeUserId, lessonCategory) {
             try {
                 const now = new Date();
+                const THREE_DAYS_AGO = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000)); // 3 days ago
                 let whereClause = {
                     status: LESSON_STATUS.CREATED
                 };
@@ -134,7 +125,10 @@ module.exports = (sequelize) => {
                     };
                 } else if (lessonCategory === 'reviewPending') {
                     whereClause.appointedDateTime = {
-                        [Op.lt]: now // Past dates
+                        [Op.and]: [
+                            { [Op.lt]: now },         // Past dates
+                            { [Op.gte]: THREE_DAYS_AGO } // But not older than 3 days
+                        ]
                     };
                 } else {
                     throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
@@ -147,8 +141,8 @@ module.exports = (sequelize) => {
                         {
                             model: sequelize.models.TuteeLesson,
                             as: 'enrolledTutees',
-                            where: { tutee_user_id: tuteeUserId },
-                            attributes: ['tutee_full_name'],
+                            where: { tuteeUserId: tuteeUserId },
+                            attributes: ['tuteeFullName'],
                             required: true // Makes this an INNER JOIN
                         }
                     ]
@@ -173,7 +167,7 @@ module.exports = (sequelize) => {
                 });
                 return amountOfApprovedLessons;
             } catch (error) {
-                throw new appError('Failed to get amount of approved lessons', 500, 'Model Error', 'lesson-model:getAmountOfApprovedLessons');
+                throw new appError('Failed to get amount of approved lessons', 500, 'MODEL_ERROR', 'lesson-model:getAmountOfApprovedLessons');
             }
         }
 
@@ -193,7 +187,7 @@ module.exports = (sequelize) => {
                         {
                             model: sequelize.models.TuteeLesson,
                             as: 'attendanceRecords',
-                            attributes: ['tutee_user_id', 'tutee_full_name'] // only what's needed
+                            attributes: ['tuteeUserId', 'tuteeFullName'] // only what's needed
                         }
                     ]
                 };
@@ -255,174 +249,161 @@ module.exports = (sequelize) => {
         }
 
         // Static method for Tutee to sign up for a lesson
-        static async signUpTutee(lessonId, tuteeUserId, tuteeFullName) {
-            const transaction = await sequelize.transaction();
-          
-            try {
-              const lesson = await Lesson.findByPk(lessonId, {
-                transaction,
-                lock: transaction.LOCK.UPDATE
-              });
-          
-              if (!lesson) {
-                throw new appError(
-                  `Lesson ${lessonId} not found`,
-                  404,
-                  'LESSON_NOT_FOUND',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              if (lesson.status !== LESSON_STATUS.CREATED) {
-                throw new appError(
-                  `Lesson ${lessonId} is in an invalid status: ${lesson.status}`,
-                  400,
-                  'INVALID_LESSON_STATUS',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              if (lesson.appointedDateTime <= new Date()) {
-                throw new appError(
-                  `Cannot sign up for past lesson ${lessonId}`,
-                  400,
-                  'PAST_LESSON',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              const signedUpCount = await sequelize.models.TuteeLesson.count({
-                where: { tutee_user_id: tuteeUserId },
-                include: [{
-                  model: sequelize.models.Lesson,
-                  as: 'lesson',
-                  where: {
-                    status: LESSON_STATUS.CREATED,
-                    appointedDateTime: { [Op.gte]: new Date() }
-                  },
-                  required: true
-                }],
-                transaction
-              });
-          
-              if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
-                throw new appError(
-                  `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
-                  409,
-                  'TUTEE_LIMIT_REACHED',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
-                where: { lesson_id: lessonId },
-                transaction
-              });
-          
-              if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
-                throw new appError(
-                  `Lesson ${lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
-                  409,
-                  'LESSON_FULL',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              const existingSignup = await sequelize.models.TuteeLesson.findOne({
-                where: {
-                  lesson_id: lessonId,
-                  tutee_user_id: tuteeUserId
-                },
-                transaction
-              });
-          
-              if (existingSignup) {
-                throw new appError(
-                  `Tutee ${tuteeUserId} is already signed up for lesson ${lessonId}`,
-                  400,
-                  'ALREADY_SIGNED_UP',
-                  'LessonModel:signUpTutee'
-                );
-              }
-          
-              await sequelize.models.TuteeLesson.create({
-                lessonId,
-                tuteeUserId,
-                tuteeFullName,
-                presence: false
-              }, { transaction });
-          
-              await transaction.commit();
-          
-              const updatedLesson = await Lesson.findByPk(lessonId, {
-                include: [
-                  {
-                    model: sequelize.models.TuteeLesson,
-                    as: 'attendanceRecords',
-                    attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
-                  }
-                ]
-              });
-          
-              return updatedLesson;
-          
-            } catch (error) {
-              await transaction.rollback();
-              console.error('Error signing up tutee:', error);
-          
-              // fallback error when something unexpected like a race condition occurs
-              throw new appError(
-                'Could not enroll right now. Please try again.',
-                409,
-                'SIGNUP_CONFLICT',
-                'LessonModel:signUpTutee'
-              );
-            }
-          }
-          
-        // Static method for Tutee to cancel their enrollment in a lesson          
-        static async handleTuteeCancellation(lessonId, tuteeUserId) {
+        static async enrollToLesson(lessonToEnroll, tuteeUserId, tuteeFullName, tuteeEmail) {
             const transaction = await sequelize.transaction();
             try {
-                const lesson = await Lesson.findByPk(lessonId, { transaction });
-                if (!lesson) {
-                    throw new appError(
-                        `Lesson ${lessonId} not found`,
-                        404,
-                        'LESSON_NOT_FOUND',
-                        'LessonModel:handleTuteeCancellation'
-                    );
-                }
-                if (lesson.status !== LESSON_STATUS.CREATED || lesson.appointedDateTime <= new Date()) {
-                    throw new appError(
-                        `Cannot cancel lesson ${lessonId} in status ${lesson.status}`,
-                        400,
-                        'TOO_LATE_TO_CANCEL',
-                        'LessonModel:handleTuteeCancellation'
-                    );
-                }
-                const tuteeInLesson = await sequelize.models.TuteeLesson.findOne({
-                    where: {
-                        lesson_id: lessonId,
-                        tutee_user_id: tuteeUserId
-                    },
-                    transaction
+                // Check tutee limits with lock to prevent concurrent enrollments
+                const signedUpCount = await sequelize.models.TuteeLesson.count({
+                    where: { tuteeUserId: tuteeUserId },
+                    include: [{
+                        model: sequelize.models.Lesson,
+                        as: 'lesson',
+                        where: {
+                            status: LESSON_STATUS.CREATED,
+                            appointedDateTime: { [Op.gte]: new Date() }
+                        },
+                        required: true
+                    }],
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
                 });
-                if (!tuteeInLesson) {
+
+                if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
                     throw new appError(
-                        `Tutee ${tuteeUserId} is not enrolled in lesson ${lessonId}`,
-                        404,
-                        'NOT_ENROLLED',
-                        'LessonModel:handleTuteeCancellation'
+                        `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
+                        409,
+                        'TUTEE_LIMIT_REACHED',
+                        'LessonModel:signUpTutee'
                     );
                 }
-                await tuteeInLesson.destroy({ transaction });
+
+                // Check lesson capacity with lock to prevent concurrent enrollments
+                const currentLessonTuteeCount = await sequelize.models.TuteeLesson.count({
+                    where: { lessonId: lessonToEnroll.lessonId },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
+                    throw new appError(
+                        `Lesson ${lessonToEnroll.lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
+                        409,
+                        'LESSON_FULL',
+                        'LessonModel:signUpTutee'
+                    );
+                }
+
+                // Check for existing enrollment with lock
+                const existingSignup = await sequelize.models.TuteeLesson.findOne({
+                    where: {
+                        lessonId: lessonToEnroll.lessonId,
+                        tuteeUserId: tuteeUserId
+                    },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                if (existingSignup) {
+                    throw new appError(
+                        `Tutee ${tuteeUserId} is already signed up for lesson ${lessonToEnroll.lessonId}`,
+                        400,
+                        'ALREADY_SIGNED_UP',
+                        'LessonModel:signUpTutee'
+                    );
+                }
+
+                // Create the enrollment
+                await sequelize.models.TuteeLesson.create({
+                    lessonId: lessonToEnroll.lessonId,
+                    tuteeUserId: tuteeUserId,
+                    tuteeFullName: tuteeFullName,
+                    tuteeEmail: tuteeEmail,
+                    presence: null,
+                    clarity: null,
+                    understanding: null,
+                    focus: null,
+                    helpful: null
+                }, { transaction });
+
                 await transaction.commit();
-                return lesson;
+
+                // Fetch the updated lesson with all its data
+                const updatedLesson = await Lesson.findByPk(lessonToEnroll.lessonId, {
+                    include: [
+                        {
+                            model: sequelize.models.TuteeLesson,
+                            as: 'enrolledTutees',
+                            attributes: ['tuteeUserId', 'tuteeFullName', 'tuteeEmail']
+                        }
+                    ]
+                });
+
+                return updatedLesson;
             } catch (error) {
                 await transaction.rollback();
-                console.error("Error handling tutee cancellation:", error);
-                throw error;
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Could not enroll right now. Please try again.', 409, 'SIGNUP_CONFLICT', 'LessonModel:signUpTutee');
+            }
+        }
+
+        // Static method for Tutee to cancel their enrollment in a lesson          
+        static async withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson) {
+            const transaction = await sequelize.transaction();
+            try {
+                await lessonInTuteeLesson.destroy({ transaction });
+                await transaction.commit();
+                return lessonToWithdraw;
+            } catch (error) {
+                await transaction.rollback();
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Failed to withdraw tutee from lesson', 500, 'WITHDRAW_ERROR', 'lesson-model:withdrawFromLesson');
+            }
+        }
+
+        static async uploadLessonReport(lessonToUpdate, lessonSummary, tuteesPresence, tutorUserId) {
+            const transaction = await sequelize.transaction();
+            try {
+                // Update lesson summary and status
+                lessonToUpdate.summary = lessonSummary;
+                lessonToUpdate.status = LESSON_STATUS.COMPLETED;
+                await lessonToUpdate.save({ transaction });
+
+                // Delegate presence verification and updates to TuteeLesson model
+                await sequelize.models.TuteeLesson.updatePresenceForLesson(
+                    lessonToUpdate.lessonId,
+                    tuteesPresence,
+                    transaction
+                );
+
+                await transaction.commit();
+
+                // Fetch and return the updated lesson with all its data
+                const updatedLesson = await Lesson.findByPk(lessonToUpdate.lessonId, {
+                    include: [
+                        {
+                            model: sequelize.models.TuteeLesson,
+                            as: 'enrolledTutees',
+                            attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
+                        }
+                    ]
+                });
+
+                return updatedLesson;
+            } catch (error) {
+                await transaction.rollback();
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError(
+                    'Failed to upload lesson report',
+                    500,
+                    'UPLOAD_REPORT_ERROR',
+                    'lesson-model:uploadLessonReport'
+                );
             }
         }
     }
@@ -503,6 +484,23 @@ module.exports = (sequelize) => {
                 len: {
                     args: [1, 100],
                     msg: 'Tutor full name must be between 1 and 100 characters.'
+                }
+            }
+        },
+        tutorEmail: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            field: 'tutor_email',
+            validate: {
+                notEmpty: {
+                    msg: 'Tutor email cannot be empty.'
+                },
+                isEmail: {
+                    msg: 'Tutor email must be a valid email address.'
+                },
+                len: {
+                    args: [1, 100],
+                    msg: 'Tutor email must be between 1 and 100 characters.'
                 }
             }
         },

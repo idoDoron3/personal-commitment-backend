@@ -1,63 +1,60 @@
 const { Model, DataTypes, ValidationError } = require('sequelize'); // Added ValidationError for potential use
+const appError = require('../utils/errors/appError');
 
 module.exports = (sequelize) => {
     class TuteeLesson extends Model {
 
-        // --- NEW: Static method to update presence ---
-        /**
-         * Updates the presence status for a specific tutee in a specific lesson.
-         * @param {number} lessonId - The ID of the lesson.
-         * @param {string} tuteeUserId - The user ID of the tutee.
-         * @param {boolean} isPresent - The presence status to set (true or false).
-         * @returns {Promise<TuteeLesson|null>} The updated TuteeLesson instance or null if not found.
-         * @throws {Error} Throws error if the record is not found or update fails.
-         */
-        static async markAttendance(lessonId, tuteeUserId, isPresent) {
-            // Basic input validation
-            if (typeof lessonId !== 'number' || typeof tuteeUserId !== 'string' || typeof isPresent !== 'boolean') {
-                throw new Error('Invalid input provided to markAttendance.');
-            }
-
-            try {
-                // Find the specific association record
-                const attendanceRecord = await this.findOne({
-                    where: {
-                        lesson_id: lessonId,
-                        tutee_user_id: tuteeUserId
-                    }
-                });
-
-                if (!attendanceRecord) {
-                    // Handle case where the tutee wasn't signed up for the lesson
-                    console.warn(`Attendance record not found for lesson ${lessonId}, tutee ${tuteeUserId}.`);
-                    // Depending on requirements, either throw an error or return null/false
-                    throw new Error(`Tutee ${tuteeUserId} is not registered for lesson ${lessonId}.`);
-                    // return null;
-                }
-
-                // Update the presence field
-                attendanceRecord.presence = isPresent;
-
-                // Save the changes (this will trigger any relevant hooks if defined later)
-                await attendanceRecord.save();
-
-                console.log(`Attendance marked for lesson ${lessonId}, tutee ${tuteeUserId}: ${isPresent}`);
-                return attendanceRecord; // Return the updated record
-
-            } catch (error) {
-                console.error(`Error marking attendance for lesson ${lessonId}, tutee ${tuteeUserId}:`, error);
-                // Re-throw the error to be handled by the calling code
-                throw error;
-            }
-        }
-
-
         // Static associate method moved inside class for consistency
         static associate(models) {
             TuteeLesson.belongsTo(models.Lesson, {
-                foreignKey: 'lesson_id',
+                foreignKey: 'lessonId',
                 as: 'lesson'
             });
+        }
+
+        static async updatePresenceForLesson(lessonId, tuteesPresence, transaction) {
+            // Get all enrolled tutees for this lesson
+            const enrolledTutees = await this.findAll({
+                where: { lessonId: lessonId },
+                transaction
+            });
+
+            // Create a map of tuteeUserId to presence status for quick lookup
+            const presenceMap = new Map(
+                tuteesPresence.map(tp => [tp.tuteeUserId, tp.presence])
+            );
+
+            // Verify all tutees in presence list are enrolled
+            for (const tp of tuteesPresence) {
+                const isEnrolled = enrolledTutees.some(t => t.tuteeUserId === tp.tuteeUserId);
+                if (!isEnrolled) {
+                    throw new appError(
+                        `Tutee ${tp.tuteeUserId} is not enrolled in this lesson`,
+                        400,
+                        'INVALID_TUTEE',
+                        'tuteeLesson-model:updatePresenceForLesson'
+                    );
+                }
+            }
+
+            // Verify that all enrolled tutees have presence information
+            const missingTutees = enrolledTutees.filter(tutee => !presenceMap.has(tutee.tuteeUserId));
+            if (missingTutees.length > 0) {
+                const missingTuteeIds = missingTutees.map(t => t.tuteeUserId).join(', ');
+                throw new appError(
+                    `Missing presence information for enrolled tutees: ${missingTuteeIds}`,
+                    400,
+                    'MISSING_PRESENCE_INFO',
+                    'tuteeLesson-model:updatePresenceForLesson'
+                );
+            }
+
+            // Update presence status for all enrolled tutees
+            for (const tutee of enrolledTutees) {
+                const presence = presenceMap.get(tutee.tuteeUserId);
+                tutee.presence = presence;
+                await tutee.save({ transaction });
+            }
         }
     }
 
@@ -79,15 +76,86 @@ module.exports = (sequelize) => {
             primaryKey: true
         },
         tuteeFullName: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: false,
             field: 'tutee_full_name',
         },
+        tuteeEmail: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            field: 'tutee_email',
+            validate: {
+                notEmpty: {
+                    msg: 'Tutee email cannot be empty.'
+                },
+                isEmail: {
+                    msg: 'Tutee email must be a valid email address.'
+                },
+                len: {
+                    args: [1, 100],
+                    msg: 'Tutee email must be between 1 and 100 characters.'
+                }
+            }
+        },
         presence: {
             type: DataTypes.BOOLEAN,
-            // --- Sticking with original: Default is false, cannot be null ---
-            defaultValue: false,
-            allowNull: false
+            allowNull: true,
+        },
+        clarity: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            validate: {
+                min: {
+                    args: [1],
+                    msg: 'Clarity rating must be at least 1'
+                },
+                max: {
+                    args: [5],
+                    msg: 'Clarity rating cannot be more than 5'
+                }
+            }
+        },
+        understanding: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            validate: {
+                min: {
+                    args: [1],
+                    msg: 'Understanding rating must be at least 1'
+                },
+                max: {
+                    args: [5],
+                    msg: 'Understanding rating cannot be more than 5'
+                }
+            }
+        },
+        focus: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            validate: {
+                min: {
+                    args: [1],
+                    msg: 'Focus rating must be at least 1'
+                },
+                max: {
+                    args: [5],
+                    msg: 'Focus rating cannot be more than 5'
+                }
+            }
+        },
+        helpful: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            validate: {
+                min: {
+                    args: [1],
+                    msg: 'Helpful rating must be at least 1'
+                },
+                max: {
+                    args: [5],
+                    msg: 'Helpful rating cannot be more than 5'
+                }
+            }
         }
     }, {
         sequelize,

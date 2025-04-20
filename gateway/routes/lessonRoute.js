@@ -1016,22 +1016,22 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
 );
 
 
-// /**
-//  * @swagger
-//  * /lessons/upload-lesson-summary:
-//  *   patch:
-//  *     summary: Upload a lesson summary
-//  *     tags: [Lessons]
-//  *     responses:
-//  *       200:
-//  *         description: Lesson summary uploaded
-//  *       404:
-//  *         description: Lesson not found
-// */
+/**
+ * @swagger
+ * /lessons/upload-lesson-summary:
+ *   patch:
+ *     summary: Upload a lesson summary
+ *     tags: [Lessons]
+ *     responses:
+ *       200:
+ *         description: Lesson summary uploaded
+ *       404:
+ *         description: Lesson not found
+*/
 
-// router.patch("/upload-lesson-summary", authenticateToken, (req, res) =>
-//   gatewayController.handleRequest(req, res, "lesson", "/upload-lesson-summary")
-// );
+router.patch("/upload-lesson-report", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/upload-lesson-report")
+);
 
 
 /**
