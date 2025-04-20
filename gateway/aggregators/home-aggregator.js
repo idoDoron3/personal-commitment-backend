@@ -10,11 +10,13 @@ const motivationSentences = [
   "Every lesson brings you closer to mastery!",
   "Your progress is your power!",
   "Learning is a journey, enjoy every step!",
-  "You're capable of amazing things!"
+  "You're capable of amazing things!",
 ];
 
 const getRandomMotivation = () => {
-  return motivationSentences[Math.floor(Math.random() * motivationSentences.length)];
+  return motivationSentences[
+    Math.floor(Math.random() * motivationSentences.length)
+  ];
 };
 
 const getUserFromToken = (req) => {
@@ -24,7 +26,7 @@ const getUserFromToken = (req) => {
 
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
-    : authHeader; 
+    : authHeader;
 
   if (!token) throw new Error("Token missing");
 
@@ -91,30 +93,30 @@ exports.aggregateHomeData = async (req) => {
   if (role === "mentor") {
     return {
       role,
-      userName: "MATAN COHEN", 
+      userName: "MATAN COHEN",
       totalHours: 12,
       nextLesson: {
         date: "2025-04-01",
         day: "Tuesday",
         startTime: "16:00",
-        endTime: "17:00", 
+        endTime: "17:00",
         student: "Naom levy",
         subject: "English",
         grade: "7",
         description: "Advanced vocabulary and conversation practice",
-        location: "Zoom Meeting"
+        location: "Zoom Meeting",
       },
       feedbackStats: {
         averageScore: 4.7,
-        totalFeedbacks: 15
-      }
+        totalFeedbacks: 15,
+      },
     };
   }
 
   if (role === "student") {
     return {
       role,
-      userName: "NOA COHEN", 
+      userName: "NOA COHEN",
       nextLesson: {
         date: "2025-04-01",
         day: "Thursday",
@@ -124,29 +126,29 @@ exports.aggregateHomeData = async (req) => {
         grade: "9",
         mentor: "Ido Ben Ami",
         description: "Mechanics and motion",
-        location: "Zoom Meeting"
+        location: "Zoom Meeting",
       },
-      motivationSentence: getRandomMotivation()
+      motivationSentence: getRandomMotivation(),
     };
   }
 
   if (role === "admin") {
     return {
       role,
-      userName: "מנהלת מערכת",
+      userName: "System Admin",
       mentorAvgScore: 4.5,
       pendingRequests: [
-        { 
-          type: "שיעור חדש",
-          user: "יוסי לוי",
-          requestId: "123"
+        {
+          type: "New Lesson Request",
+          user: "Yossi Levi",
+          requestId: "123",
         },
-        { 
-          type: "בקשת חונך", 
-          user: "נועה רוזן", 
-          requestId: "124"
-        }
-      ]
+        {
+          type: "Mentor Application",
+          user: "Noa Rosen",
+          requestId: "124",
+        },
+      ],
     };
   }
 
