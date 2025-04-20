@@ -348,6 +348,7 @@ router.get("/tutor-upcoming-lessons", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/tutor-upcoming-lessons")
 );
 
+
 /**
  * @swagger
  * /lessons/edit:
@@ -380,8 +381,19 @@ router.get("/tutor-upcoming-lessons", authenticateToken, (req, res) =>
  *                 description: New format for the lesson
  *               locationOrLink:
  *                 type: string
- *                 example: "https://zoom.us/j/987654321"
- *                 description: New location for in-person lessons or link for online lessons
+ *           examples:
+ *             minimal:
+ *               summary: Only updating format
+ *               value:
+ *                 lessonId: 12
+ *                 format: in-person
+ *             fullUpdate:
+ *               summary: Updating all optional fields
+ *               value:
+ *                 lessonId: 12
+ *                 description: "New lesson description"
+ *                 format: online
+ *                 locationOrLink: "https://zoom.us/lesson-link"
  *     responses:
  *       200:
  *         description: Lesson updated successfully
@@ -390,63 +402,89 @@ router.get("/tutor-upcoming-lessons", authenticateToken, (req, res) =>
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 lessonId:
+ *                   type: integer
+ *                 subjectName:
+ *                   type: string
+ *                 grade:
+ *                   type: string
+ *                 level:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 tutorUserId:
+ *                   type: string
+ *                 tutorFullName:
+ *                   type: string
+ *                 appointedDateTime:
+ *                   type: string
+ *                   format: date-time
+ *                 format:
+ *                   type: string
+ *                   enum: [online, in-person]
+ *                 locationOrLink:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                   enum: [created, completed, approved, notapproved, canceled, unattended]
+ *                 summary:
+ *                   type: string
+ *                   nullable: true
+ *       400:
+ *         description: Invalid status for update
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
- *                   example: "Lesson updated successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     lesson:
- *                       type: object
- *                       properties:
- *                         lessonId:
- *                           type: integer
- *                           example: 123
- *                         subjectName:
- *                           type: string
- *                           example: "Mathematics"
- *                         grade:
- *                           type: string
- *                           example: "10th Grade"
- *                         level:
- *                           type: string
- *                           example: "Advanced"
- *                         description:
- *                           type: string
- *                           example: "Updated lesson description"
- *                         appointedDateTime:
- *                           type: string
- *                           format: date-time
- *                           example: "2024-04-15T14:30:00Z"
- *                         status:
- *                           type: string
- *                           example: "created"
- *                         tutorUserId:
- *                           type: string
- *                           example: "tutor123"
- *                         tutorFullName:
- *                           type: string
- *                           example: "John Smith"
- *                         format:
- *                           type: string
- *                           example: "online"
- *                         locationOrLink:
- *                           type: string
- *                           example: "https://zoom.us/j/987654321"
- *       400:
- *         description: Invalid input data or unauthorized update
- *       401:
- *         description: Unauthorized - Invalid or missing authentication token
+ *                   example: "Cannot edit lesson in current status: completed"
+ *                 code:
+ *                   type: string
+ *                   example: INVALID_STATUS
  *       403:
- *         description: Forbidden - User is not the tutor of this lesson
+ *         description: Tutor is not authorized to edit this lesson
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized: You are not the tutor of this lesson"
+ *                 code:
+ *                   type: string
+ *                   example: UNAUTHORIZED
  *       404:
  *         description: Lesson not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson not found"
+ *                 code:
+ *                   type: string
+ *                   example: NOT_FOUND
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to edit lesson"
+ *                 code:
+ *                   type: string
+ *                   example: EDIT_LESSON_ERROR
  */
+
+
 router.patch("/edit", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/edit")
 );
@@ -559,53 +597,142 @@ router.get("/tutor-summary-pending-lessons", authenticateToken, (req, res) =>
  *             properties:
  *               lessonId:
  *                 type: integer
- *                 example: 123
- *                 description: The ID of the lesson to enroll in
  *     responses:
  *       200:
- *         description: Enrolled in lesson successfully
+ *         description: Tutee enrolled successfully, returns updated lesson
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 lessonId:
+ *                   type: integer
+ *                 subjectName:
+ *                   type: string
+ *                 grade:
+ *                   type: string
+ *                 level:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 tutorUserId:
+ *                   type: string
+ *                 tutorFullName:
+ *                   type: string
+ *                 appointedDateTime:
+ *                   type: string
+ *                   format: date-time
+ *                 format:
+ *                   type: string
+ *                   enum: [online, in-person]
+ *                 locationOrLink:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                   enum: [created, completed, approved, notapproved, canceled, unattended]
+ *                 summary:
+ *                   type: string
+ *                   nullable: true
+ *                 attendanceRecords:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tuteeUserId:
+ *                         type: string
+ *                       tuteeFullName:
+ *                         type: string
+ *                       presence:
+ *                         type: boolean
+ *       400:
+ *         description: Enrollment validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
- *                   example: "Enrolled in lesson successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     enrollment:
- *                       type: object
- *                       properties:
- *                         lessonId:
- *                           type: integer
- *                           example: 123
- *                         tuteeUserId:
- *                           type: string
- *                           example: "tutee123"
- *                         tuteeFullName:
- *                           type: string
- *                           example: "Jane Doe"
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized - Invalid or missing authentication token
- *       403:
- *         description: Forbidden - User is not a tutee
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               alreadySignedUp:
+ *                 summary: Tutee already enrolled
+ *                 value:
+ *                   message: "Tutee is already signed up for lesson 5"
+ *                   code: ALREADY_SIGNED_UP
+ *               pastLesson:
+ *                 summary: Lesson is in the past
+ *                 value:
+ *                   message: "Cannot sign up for past lesson 5"
+ *                   code: PAST_LESSON
+ *               invalidStatus:
+ *                 summary: Lesson is not in 'created' status
+ *                 value:
+ *                   message: "Lesson 5 is in an invalid status: completed"
+ *                   code: INVALID_LESSON_STATUS
  *       404:
  *         description: Lesson not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             example:
+ *               message: "Lesson 5 not found"
+ *               code: LESSON_NOT_FOUND
  *       409:
- *         description: Already enrolled or lesson is full
+ *         description: Enrollment conflict
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               lessonFull:
+ *                 summary: Lesson is full
+ *                 value:
+ *                   message: "Lesson 5 is full (max 2)"
+ *                   code: LESSON_FULL
+ *               tuteeLimitReached:
+ *                 summary: Tutee has too many future lessons
+ *                 value:
+ *                   message: "Tutee 12 has reached the max of 2 future lessons"
+ *                   code: TUTEE_LIMIT_REACHED
+ *               signupConflict:
+ *                 summary: Lost race condition
+ *                 value:
+ *                   message: "Could not enroll right now. Please try again."
+ *                   code: SIGNUP_CONFLICT
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *             example:
+ *               message: "Unexpected error occurred"
+ *               code: INTERNAL_ERROR
  */
+
+
 router.post("/enroll", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/enroll")
 );
+
 
 /**
  * @swagger
@@ -626,73 +753,92 @@ router.post("/enroll", authenticateToken, (req, res) =>
  *             properties:
  *               lessonId:
  *                 type: integer
- *                 example: 123
- *                 description: The ID of the lesson to withdraw from
  *     responses:
  *       200:
- *         description: Withdrawn from lesson successfully
+ *         description: Tutee withdrawn successfully, returns updated lesson
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 lessonId:
+ *                   type: integer
+ *                 subjectName:
+ *                   type: string
+ *                 grade:
+ *                   type: string
+ *                 level:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 tutorUserId:
+ *                   type: string
+ *                 tutorFullName:
+ *                   type: string
+ *                 appointedDateTime:
+ *                   type: string
+ *                   format: date-time
+ *                 format:
+ *                   type: string
+ *                   enum: [online, in-person]
+ *                 locationOrLink:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                   enum: [created, completed, approved, notapproved, canceled, unattended]
+ *                 summary:
+ *                   type: string
+ *                   nullable: true
+ *       400:
+ *         description: Cannot withdraw from this lesson
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
- *                   example: "Withdrawn from lesson successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     lesson:
- *                       type: object
- *                       properties:
- *                         lessonId:
- *                           type: integer
- *                           example: 123
- *                         subjectName:
- *                           type: string
- *                           example: "Mathematics"
- *                         grade:
- *                           type: string
- *                           example: "10th Grade"
- *                         level:
- *                           type: string
- *                           example: "Advanced"
- *                         description:
- *                           type: string
- *                           example: "Introduction to Calculus: Limits and Derivatives"
- *                         appointedDateTime:
- *                           type: string
- *                           format: date-time
- *                           example: "2024-04-15T14:30:00Z"
- *                         status:
- *                           type: string
- *                           example: "created"
- *                         tutorUserId:
- *                           type: string
- *                           example: "tutor123"
- *                         tutorFullName:
- *                           type: string
- *                           example: "John Smith"
- *                         format:
- *                           type: string
- *                           example: "online"
- *                         locationOrLink:
- *                           type: string
- *                           example: "https://zoom.us/j/123456789"
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized - Invalid or missing authentication token
- *       403:
- *         description: Forbidden - User is not enrolled in this lesson
+ *                   example: "Cannot cancel lesson 5 in status completed"
+ *                 code:
+ *                   type: string
+ *                   example: TOO_LATE_TO_CANCEL
  *       404:
- *         description: Lesson not found
+ *         description: Lesson or enrollment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               oneOf:
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Lesson 5 not found"
+ *                     code:
+ *                       type: string
+ *                       example: LESSON_NOT_FOUND
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Tutee 7 is not enrolled in lesson 5"
+ *                     code:
+ *                       type: string
+ *                       example: NOT_ENROLLED
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to withdraw tutee from lesson"
+ *                 code:
+ *                   type: string
+ *                   example: WITHDRAW_ERROR
  */
+
+
 router.delete("/withdraw", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/withdraw")
 );
@@ -892,12 +1038,12 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  * @swagger
  * /lessons/available:
  *   post:
- *     summary: Get all available lessons (with optional filters)
+ *     summary: Get all available lessons (with optional subject filtering)
  *     tags: [Lessons]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
@@ -905,86 +1051,96 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *             properties:
  *               subjects:
  *                 type: array
+ *                 description: Optional list of subjects to filter by
+ *                 example: ["math", "english"]
  *                 items:
  *                   type: string
- *                 example: ["Mathematics", "Physics"]
- *                 description: Optional list of subjects to filter by
+ *                   enum: ["math", "english"]
  *     responses:
  *       200:
- *         description: Available lessons retrieved successfully
+ *         description: List of available lessons with enrolled tutees
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   lessonId:
+ *                     type: integer
+ *                   subjectName:
+ *                     type: string
+ *                   grade:
+ *                     type: string
+ *                   level:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *                   tutorUserId:
+ *                     type: string
+ *                   tutorFullName:
+ *                     type: string
+ *                   appointedDateTime:
+ *                     type: string
+ *                     format: date-time
+ *                   format:
+ *                     type: string
+ *                     enum: [online, in-person]
+ *                   locationOrLink:
+ *                     type: string
+ *                   status:
+ *                     type: string
+ *                     enum: [created, completed, approved, notapproved, canceled, unattended]
+ *                   summary:
+ *                     type: string
+ *                     nullable: true
+ *                   attendanceRecords:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         tutee_user_id:
+ *                           type: string
+ *                         tutee_full_name:
+ *                           type: string
+ *       400:
+ *         description: Invalid subjects format
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Available lessons retrieved successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     lessons:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           lessonId:
- *                             type: integer
- *                             example: 123
- *                           subjectName:
- *                             type: string
- *                             example: "Mathematics"
- *                           grade:
- *                             type: string
- *                             example: "10th Grade"
- *                           level:
- *                             type: string
- *                             example: "Advanced"
- *                           description:
- *                             type: string
- *                             example: "Introduction to Calculus: Limits and Derivatives"
- *                           appointedDateTime:
- *                             type: string
- *                             format: date-time
- *                             example: "2024-04-15T14:30:00Z"
- *                           status:
- *                             type: string
- *                             example: "created"
- *                           tutorUserId:
- *                             type: string
- *                             example: "tutor123"
- *                           tutorFullName:
- *                             type: string
- *                             example: "John Smith"
- *                           format:
- *                             type: string
- *                             example: "online"
- *                           locationOrLink:
- *                             type: string
- *                             example: "https://zoom.us/j/123456789"
- *                           enrolledTutees:
- *                             type: array
- *                             items:
- *                               type: object
- *                               properties:
- *                                 tuteeUserId:
- *                                   type: string
- *                                   example: "tutee123"
- *                                 tuteeFullName:
- *                                   type: string
- *                                   example: "Jane Doe"
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized - Invalid or missing authentication token
+ *                   example: "Invalid subjects: must be an array of strings"
+ *                 code:
+ *                   type: string
+ *                   example: INVALID_SUBJECTS
+ *                 type:
+ *                   type: string
+ *                   example: appError
+ *                 source:
+ *                   type: string
+ *                   example: lesson-service:getAvailableLessons
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get available lessons"
+ *                 type:
+ *                   type: string
+ *                   example: SERVICE_ERROR
  */
+
+
 router.post("/available", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/available")
+
 );
 
 module.exports = router;
