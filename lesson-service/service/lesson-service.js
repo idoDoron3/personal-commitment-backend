@@ -1,4 +1,4 @@
-const { Lesson, Tutor,Review,TuteeLesson } = require('../models');
+const { Lesson, Tutor,TuteeLesson } = require('../models');
 const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
 const { Op } = require('sequelize');
@@ -290,53 +290,40 @@ const addReview = async ({
       throw new appError('Cannot review a lesson that is not completed', 400, 'INVALID_LESSON_STATE');
     }
 
-    // Check that tutee was enrolled in this lesson
-    const enrolled = await TuteeLesson.findOne({
+    // Fetch the tuteeLesson record
+    const tuteeLesson = await TuteeLesson.findOne({
       where: {
         lesson_id: lessonId,
         tutee_user_id: tuteeUserId
       }
     });
 
-    if (!enrolled) {
+    if (!tuteeLesson) {
       throw new appError('You are not enrolled in this lesson', 403, 'NOT_ENROLLED');
     }
 
-    // Check if review already exists
-    const existingReview = await Review.findOne({
-      where: {
-        lessonId,
-        tuteeUserId
-      }
-    });
-
-    if (existingReview) {
+    // Check if review already exists in the TuteeLesson record
+    if (tuteeLesson.clarity && tuteeLesson.understanding && tuteeLesson.focus && tuteeLesson.helpful) {
       throw new appError('Review already submitted for this lesson', 409, 'REVIEW_EXISTS');
     }
 
-    // Create the review
-    const newReview = await Review.create({
-      lessonId,
-      tuteeUserId,
-      clarity,
-      understanding,
-      focus,
-      helpful
-    });
+    // Update the record with the review ratings
+    tuteeLesson.clarity = clarity;
+    tuteeLesson.understanding = understanding;
+    tuteeLesson.focus = focus;
+    tuteeLesson.helpful = helpful;
+    await tuteeLesson.save();
 
-    return newReview;
+    return tuteeLesson;
   } catch (error) {
     if (error instanceof appError) {
       throw error;
     }
+
     console.error('Error in addReview service:', error);
     throw new appError('Failed to add review', 500, 'ADD_REVIEW_ERROR');
   }
 };
-
-
-
-
 
 //* helper functions
 
