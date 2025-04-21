@@ -294,7 +294,6 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
     }
 };
 
-
 /**
  * Add a review for a completed lesson
  * @param {number} lessonId - The ID of the lesson
