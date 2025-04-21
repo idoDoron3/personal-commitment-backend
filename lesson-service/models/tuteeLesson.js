@@ -12,6 +12,13 @@ module.exports = (sequelize) => {
             });
         }
 
+        toJSON() {
+            const values = { ...this.get() };
+            // Remove the snake_case version of lessonId
+            delete values.lesson_id;
+            return values;
+        }
+
         static async updatePresenceForLesson(lessonId, tuteesPresence, transaction) {
             // Get all enrolled tutees for this lesson
             const enrolledTutees = await this.findAll({
@@ -54,6 +61,31 @@ module.exports = (sequelize) => {
                 const presence = presenceMap.get(tutee.tuteeUserId);
                 tutee.presence = presence;
                 await tutee.save({ transaction });
+            }
+        }
+
+        static async addReview(tuteeLessonToReview, clarity, understanding, focus, helpful) {
+            const transaction = await sequelize.transaction();
+            try {
+                await tuteeLessonToReview.reload({
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                tuteeLessonToReview.clarity = clarity;
+                tuteeLessonToReview.understanding = understanding;
+                tuteeLessonToReview.focus = focus;
+                tuteeLessonToReview.helpful = helpful;
+                await tuteeLessonToReview.save({ transaction });
+                await transaction.commit();
+                return tuteeLessonToReview;
+
+            } catch (error) {
+                await transaction.rollback();
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Failed to add review', 500, 'ADD_REVIEW_ERROR', 'tuteeLesson-model:addReview');
             }
         }
     }

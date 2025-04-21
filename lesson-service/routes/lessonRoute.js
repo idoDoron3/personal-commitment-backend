@@ -8,9 +8,10 @@ const {
     enrollLessonSchema,
     withdrawLessonSchema,
     cancelLessonSchema,
-    getAvailableLessonsBySubjectSchema,
+    availableLessonsSchema,
     editLessonSchema,
-    uploadLessonReportSchema
+    uploadLessonReportSchema,
+    addReviewSchema
 
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
@@ -121,8 +122,17 @@ router.post(
     "/available",
     extractUserInfo,
     validateRole('student'),
-    validateBody(getAvailableLessonsBySubjectSchema),
-    lessonController.getAvailableLessonsBySubject
+    validateBody(availableLessonsSchema),
+    lessonController.searchAvailableLessons
+);
+
+// review a lesson by tutee
+router.patch(
+    '/review',
+    extractUserInfo,
+    validateRole('student'),
+    validateBody(addReviewSchema),
+    lessonController.addReview
 );
 
 

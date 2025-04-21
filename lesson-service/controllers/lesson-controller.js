@@ -1,20 +1,13 @@
-// lesson-service/controllers/lesson-controller.js
-// ? TODO: check if the use of the GET request is correct when using the body to send data instead of the URL
-
 const lessonService = require("../service/lesson-service");
-const { Lesson, TuteeLesson } = require("../models");
 
-//
-// TUTOR
-//
+
+// *TUTOR
 
 /**
  * @desc    Create a new lesson (Tutor only)
  * @route   POST /lessons/create
  * @access  Private (Tutor only)
  */
-// ? amit: can location or linke be null and edited later ? for now yea
-// ? amit: do we need to ask for the user email also for notification purposes ?
 exports.createLesson = async (req, res, next) => {
   try {
     const tutorUserId = req.userId; // Now available from middleware
@@ -53,7 +46,6 @@ exports.cancelLesson = async (req, res, next) => {
       message: 'Lesson canceled successfully',
       data: {
         lesson: canceledLesson.lesson,
-        // affectedTutees: canceledLesson.affectedTutees //!Amit: need to notify the affected tutees
       }
     });
   } catch (err) {
@@ -66,14 +58,11 @@ exports.cancelLesson = async (req, res, next) => {
  * @route   PATCH /lessons/edit
  * @access  Private (Tutor only)
  */
-
 exports.editLesson = async (req, res, next) => {
   try {
     const tutorUserId = req.userId;
-    const lesson = await lessonService.editLesson({
-      ...req.validatedBody,
-      tutorUserId
-    });
+    const { lessonId, description, format, locationOrLink } = req.validatedBody;
+    const lesson = await lessonService.editLesson(lessonId, tutorUserId, description, format, locationOrLink);
 
     res.status(200).json({
       success: true,
@@ -84,7 +73,6 @@ exports.editLesson = async (req, res, next) => {
     next(err);
   }
 };
-
 
 /**
  * @desc    Get the amount of approved lessons (tutor only)
@@ -128,56 +116,6 @@ exports.getLessonsOfTutor = async (req, res, next) => {
   }
 };
 
-
-//
-// *Tutee
-//
-/**
- * @desc    Get available lessons filtered by subject(s)
- * @route   POST /lessons/available
- * @access  Public
- */
-exports.getAvailableLessonsBySubject = async (req, res, next) => {
-  try {
-    const { subjects } = req.validatedBody;
-    const lessons = await lessonService.getAvailableLessons(subjects);
-    console.log("Received subjects:", subjects);
-
-    res.status(200).json({
-      success: true,
-      message: 'Available lessons retrieved successfully',
-      data: { lessons }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
-// TODO: amit: I didnt check yet this fucntion throw the layers because enrollToLesson is not implemented yet
-/**
- * @desc    Get all lessons by tutee (upcoming or review pending)
- * @route   GET /lessons/tutee-upcoming-lessons or /lessons/tutee-review-pending-lessons
- * @access  Private (Tutee only)
- */
-exports.getLessonsOfTutee = async (req, res, next) => {
-  try {
-    const tuteeUserId = req.userId;
-    const lessonCategory = req.path.includes('review-pending') ? 'reviewPending' : 'upcoming';
-
-    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee(tuteeUserId, lessonCategory);
-
-    res.status(200).json({
-      success: true,
-      message: `Tutee ${lessonCategory} lessons retrieved successfully`,
-      data: { lessonsWithEnrolledTutees }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
 /**
  * @desc    Upload a lesson report (tutor only)
  * @route   PATCH /lessons/upload-lesson-report
@@ -201,20 +139,51 @@ exports.uploadLessonReport = async (req, res, next) => {
   }
 }
 
-// ! Admin: ------------------------------------------------------------- X
-// ! getLessonsByStatus
-// ! approveLesson (think of bettter name)
-// ! getTotalCompletedLessons (returns int) ??
+//*Tutee
 
+/**
+ * @desc    Get available lessons filtered by subject(s)
+ * @route   POST /lessons/available
+ * @access  Public
+ */
+exports.searchAvailableLessons = async (req, res, next) => {
+  try {
+    const { subjectName, grade, level } = req.validatedBody;
+    const tuteeUserId = req.userId;
 
-// ! Periodical functions:
-// ! changeStatusFromCreatedToCanceledByDate
-// ! Notifictations
+    const lessons = await lessonService.searchAvailableLessons(subjectName, grade, level, tuteeUserId);
 
+    res.status(200).json({
+      success: true,
+      message: 'Available lessons retrieved successfully',
+      data: { lessons }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
-//
-// TUTEE
-//
+/**
+ * @desc    Get all lessons by tutee (upcoming or review pending)
+ * @route   GET /lessons/tutee-upcoming-lessons or /lessons/tutee-review-pending-lessons
+ * @access  Private (Tutee only)
+ */
+exports.getLessonsOfTutee = async (req, res, next) => {
+  try {
+    const tuteeUserId = req.userId;
+    const lessonCategory = req.path.includes('review-pending') ? 'reviewPending' : 'upcoming';
+
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee(tuteeUserId, lessonCategory);
+
+    res.status(200).json({
+      success: true,
+      message: `Tutee ${lessonCategory} lessons retrieved successfully`,
+      data: { lessonsWithEnrolledTutees }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 /**
  * @desc    Enroll a tutee in a lesson
@@ -240,7 +209,6 @@ exports.enrollToLesson = async (req, res, next) => {
   }
 };
 
-
 /**
  * @desc    Withdraw a tutee from a lesson
  * @route   DELETE /lessons/withdraw
@@ -263,20 +231,21 @@ exports.withdrawFromLesson = async (req, res, next) => {
   }
 };
 
-
 /**
- * @desc    Get all available lessons
- * @route   GET /lessons/available
- * @access  Public
+ * @desc    Add a review for a completed lesson
+ * @route   POST /lessons/review
+ * @access  Private (Tutee only)
  */
-exports.getAvailableLessons = async (req, res, next) => {
+exports.addReview = async (req, res, next) => {
   try {
-    const lessons = await lessonService.getAvailableLessons();
+    const tuteeUserId = req.userId; // From JWT via middleware
+    const { lessonId, clarity, understanding, focus, helpful } = req.validatedBody;
+    const result = await lessonService.addReview(lessonId, tuteeUserId, clarity, understanding, focus, helpful);
 
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      message: 'Available lessons retrieved successfully',
-      data: { lessons }
+      message: 'Review added successfully',
+      data: { review: result }
     });
   } catch (err) {
     next(err);

@@ -1,8 +1,8 @@
 const { Lesson, TuteeLesson } = require('../models');
 const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
-const { Op } = require('sequelize');
 
+//*Tutor
 /**
  * Create a new lesson
  * @param {Object} lessonData - The validated lesson data
@@ -12,6 +12,7 @@ const { Op } = require('sequelize');
  * @param {string} lessonData.description - The lesson description
  * @param {string} lessonData.tutorUserId - The user ID of the tutor
  * @param {string} lessonData.tutorFullName - The full name of the tutor
+ * @param {string} lessonData.tutorEmail - The email of the tutor
  * @param {Date} lessonData.appointedDateTime - The date and time of the lesson
  * @param {string} lessonData.format - The format of the lesson (online/offline)
  * @param {string} [lessonData.locationOrLink] - Optional location or link for the lesson
@@ -42,20 +43,14 @@ const createLesson = async ({ subjectName, grade, level, description, tutorUserI
 };
 
 /**
- * 
- * Cancel a lesson (tutor only)
- * @param {Object} validatedBody - The validated request body containing lessonId and tutorId
+ * Cancel a lesson
+ * @param {number} lessonId - The ID of the lesson
+ * @param {string} tutorUserId - The ID of the tutor
  * @returns {Promise<Object>} The canceled lesson
  */
 const cancelLesson = async (lessonId, tutorUserId) => {
     try {
-        const lessonToCancel = await Lesson.findByPk(lessonId, {
-            include: [{
-                model: sequelize.models.TuteeLesson,
-                as: 'enrolledTutees',
-                attributes: ['tutee_user_id']
-            }]
-        });
+        const lessonToCancel = await Lesson.findByPk(lessonId);
 
         if (!lessonToCancel) {
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
@@ -70,7 +65,7 @@ const cancelLesson = async (lessonId, tutorUserId) => {
             throw new appError('Cannot cancel a lessons whose appointed time has passed', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
         }
 
-        const result = await Lesson.cancelLesson(lessonToCancel, lessonToCancel.enrolledTutees);
+        const result = await Lesson.cancelLesson(lessonToCancel);
         return result;
     } catch (error) {
         if (error instanceof appError) {
@@ -80,6 +75,38 @@ const cancelLesson = async (lessonId, tutorUserId) => {
     }
 };
 
+/**
+ * Edit a lesson
+ * @param {Object} lessonData - The validated lesson data
+ * @param {number} lessonData.lessonId - The ID of the lesson to edit
+ * @param {string} lessonData.tutorUserId - The user ID of the tutor
+ * @param {string} lessonData.description - The lesson description
+ * @param {string} lessonData.format - The format of the lesson (online/offline)
+ * @param {string} [lessonData.locationOrLink] - Optional location or link for the lesson
+ * @returns {Promise<Object>} The updated lesson
+ * */
+const editLesson = async (lessonId, tutorUserId, description, format, locationOrLink) => {
+    try {
+
+        const lessonToEdit = await Lesson.findByPk(lessonId);
+        if (!lessonToEdit) {
+            throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:editLesson');
+        }
+        if (lessonToEdit.tutorUserId !== tutorUserId) {
+            throw new appError('Unauthorized: Only the assigned tutor can edit the lesson', 403, 'UNAUTHORIZED', 'lesson-service:editLesson');
+        }
+        if (lessonToEdit.status !== LESSON_STATUS.CREATED) {
+            throw new appError(`Lesson cannot be edited in its current status: ${lessonToEdit.status}`, 400, 'INVALID_STATUS', 'lesson-service:editLesson');
+        }
+        const updatedLesson = await Lesson.editLesson(lessonToEdit, description, format, locationOrLink);
+        return updatedLesson;
+    } catch (error) {
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError("Failed to edit lesson", 500, "EDIT_LESSON_ERROR", "lesson-service:editLesson");
+    }
+};
 
 /**
  * Get the amount of approved lessons
@@ -96,37 +123,9 @@ const getAmountOfApprovedLessons = async (tutorUserId) => {
 }
 
 /**
- * Edit a lesson
- * @param {Object} lessonData - The validated lesson data
- * @param {number} lessonData.lessonId - The ID of the lesson to edit
- * @param {string} lessonData.tutorUserId - The user ID of the tutor
- * @param {string} lessonData.description - The lesson description
- * @param {string} lessonData.format - The format of the lesson (online/offline)
- * @param {string} [lessonData.locationOrLink] - Optional location or link for the lesson
- * @returns {Promise<Object>} The updated lesson
- * */
-const editLesson = async ({ lessonId, tutorUserId, description, format, locationOrLink }) => {
-    try {
-        const updatedLesson = await Lesson.editLessonByTutor(
-            lessonId,
-            tutorUserId,
-            { description, format, locationOrLink }
-        );
-        return updatedLesson;
-    } catch (error) {
-        // console.error("Error editing lesson:", error);
-        if (error instanceof appError) {
-            throw error;
-        }
-        throw new appError("Failed to edit lesson", 500, "EDIT_LESSON_ERROR", "lesson-service:editLesson");
-    }
-};
-
-/**
- * Get all lessons by tutor
- * @param {Object} tutorData - The tutor data
- * @param {string} tutorData.tutorUserId - The ID of the tutor
- * @param {string} tutorData.lessonCategory - The type of lessons to retrieve ('upcoming' or 'summaryPending')
+ * Get all lessons by tutor (upcoming or summary pending)
+ * @param {string} tutorUserId - The ID of the tutor
+ * @param {string} lessonCategory - The type of lessons to retrieve ('upcoming' or 'summaryPending')
  * @returns {Promise<Array>} Array of lessons
  */
 const getLessonsOfTutor = async (tutorUserId, lessonCategory) => {
@@ -141,13 +140,71 @@ const getLessonsOfTutor = async (tutorUserId, lessonCategory) => {
     }
 };
 
+/**
+ * Upload a lesson report (tutor only)
+ * @param {number} lessonId - The ID of the lesson
+ * @param {string} lessonSummary - The summary of the lesson
+ * @param {string} tuteesPresence - The presence of the tutees
+ * @param {string} tutorUserId - The ID of the tutor
+ * @returns {Promise<Object>} The updated lesson
+ */
+const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutorUserId) => {
+    try {
+        const lessonToUploadReport = await Lesson.findByPk(lessonId);
+        if (!lessonToUploadReport) {
+            throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:uploadLessonReport');
+        }
+        if (lessonToUploadReport.tutorUserId !== tutorUserId) {
+            throw new appError('Unauthorized: Only the assigned tutor can upload a lesson report', 403, 'UNAUTHORIZED', 'lesson-service:uploadLessonReport');
+        }
+        if (lessonToUploadReport.status !== LESSON_STATUS.CREATED) {
+            throw new appError(`Lesson report cannot be uploaded in its current status: ${lessonToUploadReport.status}`, 400, 'INVALID_STATUS', 'lesson-service:uploadLessonReport');
+        }
+        if (lessonToUploadReport.appointedDateTime > new Date()) {
+            throw new appError('Cannot upload a lesson report for a lesson whose not occurred yet', 400, 'LESSON_NOT_OCCURRED', 'lesson-service:uploadLessonReport');
+        }
 
+        const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence, tutorUserId);
+        return updatedLesson;
+    } catch (error) {
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError('Failed to upload lesson report', 500, 'UPLOAD_REPORT_ERROR', 'lesson-service:uploadLessonReport');
+    }
+};
+
+//*Tutee
 
 /**
- * Get all lessons by tutee
- * @param {Object} tuteeData - The tutee data
- * @param {string} tuteeData.tuteeUserId - The ID of the tutee
- * @param {string} tuteeData.lessonCategory - The type of lessons to retrieve ('upcoming' or 'reviewPending')
+ * Get available lessons by subject, grade, and level
+ * @param {Object} filterData
+ * @param {string} filterData.subject - Subject name
+ * @param {string|number} filterData.grade - Grade level
+ * @param {string} filterData.level - Skill level
+ * @param {string} filterData.tuteeId - User ID from token
+ * @returns {Promise<Array>} Filtered lessons
+ */
+const searchAvailableLessons = async (subject, grade, level, tuteeUserId) => {
+    try {
+        return await Lesson.searchAvailableLessons(subject, grade, level, tuteeUserId);
+    } catch (error) {
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError(
+            'Failed to get available lessons',
+            500,
+            'GET_AVAILABLE_ERROR',
+            'lesson-service:getAvailableLessons'
+        );
+    }
+};
+
+/**
+ * Get all lessons by tutee (upcoming or review pending)
+ * @param {string} tuteeUserId - The ID of the tutee
+ * @param {string} lessonCategory - The type of lessons to retrieve ('upcoming' or 'reviewPending')
  * @returns {Promise<Array>} Array of lessons
  */
 const getLessonsOfTutee = async (tuteeUserId, lessonCategory) => {
@@ -162,12 +219,13 @@ const getLessonsOfTutee = async (tuteeUserId, lessonCategory) => {
     }
 };
 
+
 /**
  * Enroll a tutee into a lesson
- * @param {Object} input
- * @param {number} input.lessonId - The ID of the lesson
- * @param {string} input.tuteeUserId - The ID of the tutee (from token)
- * @returns {Promise<Object>} The updated lesson
+ * @param {number} lessonId - The ID of the lesson
+ * @param {string} tuteeUserId - The ID of the tutee
+ * @param {string} tuteeFullName - The full name of the tutee
+ * @param {string} tuteeEmail - The email of the tutee
  */
 const enrollToLesson = async (lessonId, tuteeUserId, tuteeFullName, tuteeEmail) => {
     try {
@@ -217,16 +275,15 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
 
         const lessonInTuteeLesson = await TuteeLesson.findOne({
             where: {
-                lesson_id: lessonId,
-                tutee_user_id: tuteeUserId
+                lessonId: lessonId,
+                tuteeUserId: tuteeUserId
             }
         });
 
         if (!lessonInTuteeLesson) {
-            throw new appError('Unauthorized: Only the assigned tutee can withdraw from the lesson', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
+            throw new appError('You are not enrolled in this lesson', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         const result = await Lesson.withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson);
-
 
         return result;
     } catch (error) {
@@ -238,71 +295,54 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
 };
 
 
-
 /**
- * Get all available lessons, optionally filtered by subject(s)
- * @param {Array<string>} [subjects] - Optional array of subject names to filter
- * @returns {Promise<Array>} Array of available lessons
+ * Add a review for a completed lesson
+ * @param {number} lessonId - The ID of the lesson
+ * @param {string} tuteeUserId - The ID of the tutee
+ * @param {string} clarity - The clarity of the lesson
+ * @param {string} understanding - The understanding of the lesson
+ * @param {string} focus - The focus of the lesson
+ * @param {string} helpful - The helpfulness of the lesson
  */
-const getAvailableLessons = async (subjects) => {
+const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, helpful) => {
     try {
-        // ✅ Validate subjects
-        if (subjects && (!Array.isArray(subjects) || !subjects.every(sub => typeof sub === 'string'))) {
-            throw new appError(
-                'Invalid subjects: must be an array of strings',
-                400,
-                'INVALID_SUBJECTS',
-                'lesson-service:getAvailableLessons'
-            );
+        const lesson = await Lesson.findByPk(lessonId);
+        if (!lesson) {
+            throw new appError('Lesson not found', 404, 'LESSON_NOT_FOUND', 'lesson-service:addReview');
         }
 
-        // ✅ Call model-level method
-        return await Lesson.getAvailableLessons(subjects);
-    } catch (error) {
-        // console.error('Error in getAvailableLessons service:', error);
-
-        if (error.type) {
-            throw error;
+        if (lesson.status !== LESSON_STATUS.CREATED) {
+            throw new appError(`Cannot review a lesson in its current status: ${lesson.status}`, 400, 'INVALID_LESSON_STATE', 'lesson-service:addReview');
         }
 
-        const serviceError = new Error('Failed to get available lessons');
-        serviceError.type = 'SERVICE_ERROR';
-        serviceError.originalError = error;
-        throw serviceError;
-    }
-};
+        // Fetch the tuteeLesson record
+        const tuteeInLessonToReview = await TuteeLesson.findOne({
+            where: {
+                lessonId: lessonId,
+                tuteeUserId: tuteeUserId
+            }
+        });
 
-
-const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutorUserId) => {
-    try {
-        const lessonToUploadReport = await Lesson.findByPk(lessonId);
-        if (!lessonToUploadReport) {
-            throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:uploadLessonReport');
-        }
-        if (lessonToUploadReport.tutorUserId !== tutorUserId) {
-            throw new appError('Unauthorized: Only the assigned tutor can upload a lesson report', 403, 'UNAUTHORIZED', 'lesson-service:uploadLessonReport');
-        }
-        if (lessonToUploadReport.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson report cannot be uploaded in its current status: ${lessonToUploadReport.status}`, 400, 'INVALID_STATUS', 'lesson-service:uploadLessonReport');
-        }
-        if (lessonToUploadReport.appointedDateTime > new Date()) {
-            throw new appError('Cannot upload a lesson report for a lesson whose not occurred yet', 400, 'LESSON_NOT_OCCURRED', 'lesson-service:uploadLessonReport');
+        if (!tuteeInLessonToReview) {
+            throw new appError('You are not enrolled in this lesson', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
         }
 
-        const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence, tutorUserId);
-        return updatedLesson;
+        // Check if review already exists in the TuteeLesson record
+        if (tuteeInLessonToReview.clarity && tuteeInLessonToReview.understanding && tuteeInLessonToReview.focus && tuteeInLessonToReview.helpful) {
+            throw new appError('Review already submitted for this lesson', 409, 'REVIEW_EXISTS', 'lesson-service:addReview');
+        }
+
+        // Update the record with the review ratings
+        const reviewedLessonByTutee = await TuteeLesson.addReview(tuteeInLessonToReview, clarity, understanding, focus, helpful);
+        // Update the lesson status to REVIEW_PENDING
+        return { lesson, reviewedLessonByTutee };
     } catch (error) {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to upload lesson report', 500, 'UPLOAD_REPORT_ERROR', 'lesson-service:uploadLessonReport');
+        throw new appError('Failed to add review', 500, 'ADD_REVIEW_ERROR', 'lesson-service:addReview');
     }
 };
-
-
-
-
-
 
 module.exports = {
     createLesson,
@@ -311,9 +351,9 @@ module.exports = {
     enrollToLesson,
     withdrawFromLesson,
     getLessonsOfTutee,
-    getAvailableLessons,
+    searchAvailableLessons,
     getAmountOfApprovedLessons,
     editLesson,
-    uploadLessonReport
+    uploadLessonReport,
+    addReview
 };
-
