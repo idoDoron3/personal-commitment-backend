@@ -202,22 +202,50 @@ const addReviewSchema = Joi.object({
         .integer()
         .min(1)
         .max(5)
-        .required(),
+        .required()
+        .messages({
+            'number.base': 'Clarity rating must be a number',
+            'number.integer': 'Clarity rating must be an integer',
+            'number.min': 'Clarity rating must be at least 1',
+            'number.max': 'Clarity rating cannot be more than 5',
+            'any.required': 'Clarity rating is required'
+        }),
     understanding: Joi.number()
         .integer()
         .min(1)
         .max(5)
-        .required(),
+        .required()
+        .messages({
+            'number.base': 'Understanding rating must be a number',
+            'number.integer': 'Understanding rating must be an integer',
+            'number.min': 'Understanding rating must be at least 1',
+            'number.max': 'Understanding rating cannot be more than 5',
+            'any.required': 'Understanding rating is required'
+        }),
     focus: Joi.number()
         .integer()
         .min(1)
         .max(5)
-        .required(),
+        .required()
+        .messages({
+            'number.base': 'Focus rating must be a number',
+            'number.integer': 'Focus rating must be an integer',
+            'number.min': 'Focus rating must be at least 1',
+            'number.max': 'Focus rating cannot be more than 5',
+            'any.required': 'Focus rating is required'
+        }),
     helpful: Joi.number()
         .integer()
         .min(1)
         .max(5)
         .required()
+        .messages({
+            'number.base': 'Helpful rating must be a number',
+            'number.integer': 'Helpful rating must be an integer',
+            'number.min': 'Helpful rating must be at least 1',
+            'number.max': 'Helpful rating cannot be more than 5',
+            'any.required': 'Helpful rating is required'
+        })
 });
 const uploadLessonReportSchema = Joi.object({
     lessonId: Joi.number()

@@ -1018,16 +1018,125 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
 
 /**
  * @swagger
- * /lessons/upload-lesson-summary:
+ * /lessons/upload-lesson-report:
  *   patch:
- *     summary: Upload a lesson summary
+ *     summary: Upload a lesson report (Tutor only)
  *     tags: [Lessons]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lessonId
+ *               - lessonSummary
+ *               - tuteesPresence
+ *             properties:
+ *               lessonId:
+ *                 type: integer
+ *                 example: 123
+ *                 description: The ID of the lesson to upload report for
+ *               lessonSummary:
+ *                 type: string
+ *                 example: "Today we covered quadratic equations and their applications. Students practiced solving word problems and graphing quadratic functions."
+ *                 description: Detailed summary of what was covered in the lesson
+ *               tuteesPresence:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - tuteeUserId
+ *                     - presence
+ *                   properties:
+ *                     tuteeUserId:
+ *                       type: string
+ *                       example: "tutee123"
+ *                     presence:
+ *                       type: boolean
+ *                       example: true
+ *                 description: Array of tutees and their attendance status
  *     responses:
  *       200:
- *         description: Lesson summary uploaded
+ *         description: Lesson report uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson report uploaded successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     updatedLesson:
+ *                       type: object
+ *                       properties:
+ *                         lessonId:
+ *                           type: integer
+ *                           example: 123
+ *                         subjectName:
+ *                           type: string
+ *                           example: "Mathematics"
+ *                         grade:
+ *                           type: string
+ *                           example: "10th Grade"
+ *                         level:
+ *                           type: string
+ *                           example: "Advanced"
+ *                         description:
+ *                           type: string
+ *                           example: "Introduction to Calculus: Limits and Derivatives"
+ *                         appointedDateTime:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2024-04-15T14:30:00Z"
+ *                         status:
+ *                           type: string
+ *                           example: "completed"
+ *                         tutorUserId:
+ *                           type: string
+ *                           example: "tutor123"
+ *                         tutorFullName:
+ *                           type: string
+ *                           example: "John Smith"
+ *                         format:
+ *                           type: string
+ *                           example: "online"
+ *                         locationOrLink:
+ *                           type: string
+ *                           example: "https://zoom.us/j/123456789"
+ *                         summary:
+ *                           type: string
+ *                           example: "Today we covered quadratic equations and their applications. Students practiced solving word problems and graphing quadratic functions."
+ *       400:
+ *         description: Invalid request or lesson cannot be updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot upload a lesson report for a lesson whose not occurred yet"
+ *                 code:
+ *                   type: string
+ *                   example: "LESSON_NOT_OCCURRED"
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *       403:
+ *         description: Forbidden - User is not the tutor of this lesson
  *       404:
  *         description: Lesson not found
-*/
+ *       500:
+ *         description: Internal server error
+ */
 
 router.patch("/upload-lesson-report", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/upload-lesson-report")
@@ -1056,53 +1165,82 @@ router.patch("/upload-lesson-report", authenticateToken, (req, res) =>
  *                 items:
  *                   type: string
  *                   enum: ["math", "english"]
+ *               grade:
+ *                 type: string
+ *                 description: Optional grade level to filter by
+ *                 example: "10th Grade"
+ *               level:
+ *                 type: string
+ *                 description: Optional level to filter by
+ *                 example: "Advanced"
  *     responses:
  *       200:
  *         description: List of available lessons with enrolled tutees
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   lessonId:
- *                     type: integer
- *                   subjectName:
- *                     type: string
- *                   grade:
- *                     type: string
- *                   level:
- *                     type: string
- *                   description:
- *                     type: string
- *                   tutorUserId:
- *                     type: string
- *                   tutorFullName:
- *                     type: string
- *                   appointedDateTime:
- *                     type: string
- *                     format: date-time
- *                   format:
- *                     type: string
- *                     enum: [online, in-person]
- *                   locationOrLink:
- *                     type: string
- *                   status:
- *                     type: string
- *                     enum: [created, completed, approved, notapproved, canceled, unattended]
- *                   summary:
- *                     type: string
- *                     nullable: true
- *                   attendanceRecords:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         tutee_user_id:
- *                           type: string
- *                         tutee_full_name:
- *                           type: string
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Available lessons retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     lessons:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           lessonId:
+ *                             type: integer
+ *                             example: 123
+ *                           subjectName:
+ *                             type: string
+ *                             example: "Mathematics"
+ *                           grade:
+ *                             type: string
+ *                             example: "10th Grade"
+ *                           level:
+ *                             type: string
+ *                             example: "Advanced"
+ *                           description:
+ *                             type: string
+ *                             example: "Introduction to Calculus: Limits and Derivatives"
+ *                           tutorUserId:
+ *                             type: string
+ *                             example: "tutor123"
+ *                           tutorFullName:
+ *                             type: string
+ *                             example: "John Smith"
+ *                           appointedDateTime:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2024-04-15T14:30:00Z"
+ *                           format:
+ *                             type: string
+ *                             enum: [online, in-person]
+ *                             example: "online"
+ *                           locationOrLink:
+ *                             type: string
+ *                             example: "https://zoom.us/j/123456789"
+ *                           status:
+ *                             type: string
+ *                             example: "created"
+ *                           enrolledTutees:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 tuteeUserId:
+ *                                   type: string
+ *                                   example: "tutee123"
+ *                                 tuteeFullName:
+ *                                   type: string
+ *                                   example: "Jane Doe"
  *       400:
  *         description: Invalid subjects format
  *         content:
@@ -1122,6 +1260,8 @@ router.patch("/upload-lesson-report", authenticateToken, (req, res) =>
  *                 source:
  *                   type: string
  *                   example: lesson-service:getAvailableLessons
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
  *       500:
  *         description: Internal server error
  *         content:
@@ -1146,8 +1286,8 @@ router.post("/available", authenticateToken, (req, res) =>
 /**
  * @swagger
  * /lessons/review:
- *   post:
- *     summary: Add a review for a completed lesson
+ *   patch:
+ *     summary: Add a review for a completed lesson (Tutee only)
  *     tags: [Lessons]
  *     security:
  *       - bearerAuth: []
@@ -1166,30 +1306,126 @@ router.post("/available", authenticateToken, (req, res) =>
  *             properties:
  *               lessonId:
  *                 type: integer
+ *                 example: 123
+ *                 description: The ID of the lesson to review
  *               clarity:
- *                 type: string
- *                 enum: ['1', '2', '3', '4', '5']
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *                 description: Rating for how clear the lesson was (1-5)
  *               understanding:
- *                 type: string
- *                 enum: ['1', '2', '3', '4', '5']
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 4
+ *                 description: Rating for how well the material was understood (1-5)
  *               focus:
- *                 type: string
- *                 enum: ['1', '2', '3', '4', '5']
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *                 description: Rating for how focused the lesson was (1-5)
  *               helpful:
- *                 type: string
- *                 enum: ['1', '2', '3', '4', '5']
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 4
+ *                 description: Rating for how helpful the lesson was (1-5)
  *     responses:
  *       201:
  *         description: Review added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Review added successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     review:
+ *                       type: object
+ *                       properties:
+ *                         lessonId:
+ *                           type: integer
+ *                           example: 123
+ *                         tuteeUserId:
+ *                           type: string
+ *                           example: "tutee123"
+ *                         clarity:
+ *                           type: integer
+ *                           example: 5
+ *                         understanding:
+ *                           type: integer
+ *                           example: 4
+ *                         focus:
+ *                           type: integer
+ *                           example: 5
+ *                         helpful:
+ *                           type: integer
+ *                           example: 4
  *       400:
  *         description: Validation error or review already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Review already submitted for this lesson"
+ *                 code:
+ *                   type: string
+ *                   example: REVIEW_EXISTS
  *       401:
  *         description: Unauthorized - missing or invalid token
  *       403:
  *         description: Forbidden - tutee didn't attend the lesson
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not enrolled in this lesson"
+ *                 code:
+ *                   type: string
+ *                   example: NOT_ENROLLED
+ *       404:
+ *         description: Lesson not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson not found"
+ *                 code:
+ *                   type: string
+ *                   example: LESSON_NOT_FOUND
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to add review"
+ *                 code:
+ *                   type: string
+ *                   example: ADD_REVIEW_ERROR
  */
+
 router.patch("/review", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/review")
 );
