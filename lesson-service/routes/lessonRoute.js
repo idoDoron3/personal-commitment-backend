@@ -11,8 +11,8 @@ const {
     availableLessonsSchema,
     editLessonSchema,
     uploadLessonReportSchema,
-    addReviewSchema
-
+    addReviewSchema,
+    updateLessonVerdictSchema
 } = require('../validators/lesson-validator');
 const Joi = require('joi');
 
@@ -135,6 +135,21 @@ router.patch(
     lessonController.addReview
 );
 
+//* Admin
+//! we only verify via admin role (hope it is enough)
+router.get(
+    "/verdict-pending-lessons",
+    extractUserInfo,
+    validateRole('admin'),
+    lessonController.getVerdictPendingLessons
+);
 
+router.patch(
+    "/update-lesson-verdict",
+    extractUserInfo,
+    validateRole('admin'),
+    validateBody(updateLessonVerdictSchema),
+    lessonController.updateLessonVerdict
+);
 
 module.exports = router;
