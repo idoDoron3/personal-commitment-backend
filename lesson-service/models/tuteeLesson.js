@@ -1,4 +1,4 @@
-const { Model, DataTypes, ValidationError } = require('sequelize'); // Added ValidationError for potential use
+const { Model, DataTypes } = require('sequelize'); // Added ValidationError for potential use
 const appError = require('../utils/errors/appError');
 
 module.exports = (sequelize) => {

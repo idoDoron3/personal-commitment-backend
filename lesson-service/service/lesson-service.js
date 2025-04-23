@@ -282,7 +282,7 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         if (lessonToWithdraw.status !== LESSON_STATUS.CREATED) {
-            throw new appError('Lesson cannot be withdrawn in its current status: ${lessonToWithdraw.status}', 400, 'INVALID_STATUS', 'lesson-service:withdrawFromLesson');
+            throw new appError(`Lesson cannot be withdrawn in its current status: ${lessonToWithdraw.status}`, 400, 'INVALID_STATUS', 'lesson-service:withdrawFromLesson');
         }
         const THREE_HOURS_BEFORE_APPOINTMENT = new Date(lessonToWithdraw.appointedDateTime - (3 * 60 * 60 * 1000));
         const NOW = new Date();
