@@ -112,7 +112,7 @@ module.exports = (sequelize) => {
             allowNull: false,
             field: 'lesson_id',
             references: {
-                model: 'lessons', // Table name of the Lesson model
+                model: sequelize.models.Lesson, // Table name of the Lesson model
                 key: 'lesson_id'  // Primary key column in lessons table
             },
             primaryKey: true
@@ -134,14 +134,14 @@ module.exports = (sequelize) => {
             field: 'tutee_email',
             validate: {
                 notEmpty: {
-                    msg: 'Tutee email cannot be empty.'
+                    msg: 'Tutee email cannot be empty'
                 },
                 isEmail: {
-                    msg: 'Tutee email must be a valid email address.'
+                    msg: 'Tutee email must be a valid email address'
                 },
                 len: {
                     args: [1, 100],
-                    msg: 'Tutee email must be between 1 and 100 characters.'
+                    msg: 'Tutee email must be between 1 and 100 characters'
                 }
             }
         },
@@ -159,7 +159,7 @@ module.exports = (sequelize) => {
                 },
                 max: {
                     args: [5],
-                    msg: 'Clarity rating cannot be more than 5'
+                    msg: 'Clarity rating must not be more than 5'
                 }
             }
         },
@@ -173,7 +173,7 @@ module.exports = (sequelize) => {
                 },
                 max: {
                     args: [5],
-                    msg: 'Understanding rating cannot be more than 5'
+                    msg: 'Understanding rating must not be more than 5'
                 }
             }
         },
@@ -187,7 +187,7 @@ module.exports = (sequelize) => {
                 },
                 max: {
                     args: [5],
-                    msg: 'Focus rating cannot be more than 5'
+                    msg: 'Focus rating must not be more than 5'
                 }
             }
         },
@@ -201,7 +201,7 @@ module.exports = (sequelize) => {
                 },
                 max: {
                     args: [5],
-                    msg: 'Helpful rating cannot be more than 5'
+                    msg: 'Helpful rating must not be more than 5'
                 }
             }
         }
@@ -213,7 +213,9 @@ module.exports = (sequelize) => {
         underscored: true,
         // Indexes help speed up queries involving these foreign keys
         indexes: [
-            { fields: ['tutee_user_id'] }
+            { fields: ['lesson_id'] },
+            { fields: ['tutee_user_id'] },
+            { fields: ['lesson_id', 'tutee_user_id'], unique: true }
         ]
     });
 

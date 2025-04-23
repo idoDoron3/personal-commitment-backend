@@ -1,5 +1,6 @@
 const { Model, DataTypes, ValidationError, Op } = require('sequelize');
 const appError = require('../utils/errors/appError');
+const { TuteeLesson } = require('./tuteeLesson');
 
 // Define constants for status values
 const LESSON_STATUS = {
@@ -22,14 +23,14 @@ const lessonFormatValues = Object.values(LESSON_FORMAT);
 // !
 // TODO: deciedd on agreed limits
 const MAX_TUTEES_PER_LESSON = 2;
-const MAX_OPEN_LESSONS_PER_TUTOR = 10;
-const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 10;
+const MAX_OPEN_LESSONS_PER_TUTOR = 6;
+const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 3;
 
 module.exports = (sequelize) => {
     class Lesson extends Model {
         static associate(models) {
             this.hasMany(models.TuteeLesson, {
-                foreignKey: 'lesson_id',
+                foreignKey: 'lessonId',
                 as: 'enrolledTutees'
             });
         }
@@ -364,6 +365,12 @@ module.exports = (sequelize) => {
                     );
                 }
 
+                console.log('-----------------------------------------------------------------');
+                console.log('-----------------------------------------------------------------');
+                console.log(lessonToEnroll.lessonId);
+                console.log(tuteeUserId);
+                console.log('-----------------------------------------------------------------');
+                console.log('-----------------------------------------------------------------');
                 // Check for existing enrollment with lock
                 const existingSignup = await sequelize.models.TuteeLesson.findOne({
                     where: {
@@ -415,6 +422,11 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
+                console.log('-----------------------------------------------------------------');
+                console.log('-----------------------------------------------------------------');
+                console.log(error);
+                console.log('-----------------------------------------------------------------');
+                console.log('-----------------------------------------------------------------');
                 throw new appError('Could not enroll right now. Please try again.', 409, 'SIGNUP_CONFLICT', 'LessonModel:signUpTutee');
             }
         }
