@@ -73,7 +73,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to cancel lesson', 500, 'CANCEL_ERROR', 'lesson-model:cancelLesson');
+                throw new appError('Lesson cancellation failed', 500, 'CANCEL_ERROR', 'lesson-model:cancelLesson');
             }
         }
 
@@ -105,7 +105,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to edit lesson', 500, 'EDIT_ERROR', 'lesson-model:editLesson');
+                throw new appError('Lesson editing failed', 500, 'EDIT_ERROR', 'lesson-model:editLesson');
             }
         }
 
@@ -119,7 +119,7 @@ module.exports = (sequelize) => {
                 });
                 return amountOfApprovedLessons;
             } catch (error) {
-                throw new appError('Failed to get amount of approved lessons', 500, 'MODEL_ERROR', 'lesson-model:getAmountOfApprovedLessons');
+                throw new appError('Fetching amount of approved lessons failed', 500, 'MODEL_ERROR', 'lesson-model:getAmountOfApprovedLessons');
             }
         }
 
@@ -142,7 +142,7 @@ module.exports = (sequelize) => {
                         [Op.lt]: ONE_HOUR_AGO // Older than 1 hour
                     };
                 } else {
-                    throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutor');
+                    throw new appError('Fetching lessons failed', 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutor');
                 }
 
                 const lessons = await Lesson.findAll({
@@ -173,7 +173,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to get lessons of tutor', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutor');
+                throw new appError('Fetching lessons failed', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutor');
             }
         }
 
@@ -220,7 +220,7 @@ module.exports = (sequelize) => {
                     throw error;
                 }
                 throw new appError(
-                    'Failed to upload lesson report',
+                    'Uploading lesson report failed',
                     500,
                     'UPLOAD_REPORT_ERROR',
                     'lesson-model:uploadLessonReport'
@@ -265,7 +265,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Error fetching available lessons', 500, 'AVAILABLE_FETCH_ERROR', 'lesson-model:searchAvailableLessons');
+                throw new appError('Lesson search failed', 500, 'AVAILABLE_FETCH_ERROR', 'lesson-model:searchAvailableLessons');
             }
         }
 
@@ -290,7 +290,7 @@ module.exports = (sequelize) => {
                         ]
                     };
                 } else {
-                    throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
+                    throw new appError('Fetching lessons failed', 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
                 }
 
                 const lessons = await Lesson.findAll({
@@ -312,7 +312,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to get lessons of tutee', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutee');
+                throw new appError('Fetching lessons failed', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutee');
             }
         }
 
@@ -342,7 +342,7 @@ module.exports = (sequelize) => {
 
                 if (signedUpCount >= MAX_SIGNEDUP_LESSONS_PER_TUTEE) {
                     throw new appError(
-                        `Tutee ${tuteeUserId} has reached the max of ${MAX_SIGNEDUP_LESSONS_PER_TUTEE} future lessons`,
+                        'Maximum number of future lessons reached',
                         409,
                         'TUTEE_LIMIT_REACHED',
                         'LessonModel:signUpTutee'
@@ -358,21 +358,15 @@ module.exports = (sequelize) => {
 
                 if (currentLessonTuteeCount >= MAX_TUTEES_PER_LESSON) {
                     throw new appError(
-                        `Lesson ${lessonToEnroll.lessonId} is full (max ${MAX_TUTEES_PER_LESSON})`,
+                        'Lesson is full',
                         409,
                         'LESSON_FULL',
                         'LessonModel:signUpTutee'
                     );
                 }
 
-                console.log('-----------------------------------------------------------------');
-                console.log('-----------------------------------------------------------------');
-                console.log(lessonToEnroll.lessonId);
-                console.log(tuteeUserId);
-                console.log('-----------------------------------------------------------------');
-                console.log('-----------------------------------------------------------------');
                 // Check for existing enrollment with lock
-                const existingSignup = await sequelize.models.TuteeLesson.findOne({
+                const existingEnrollment = await sequelize.models.TuteeLesson.findOne({
                     where: {
                         lessonId: lessonToEnroll.lessonId,
                         tuteeUserId: tuteeUserId
@@ -381,9 +375,9 @@ module.exports = (sequelize) => {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                if (existingSignup) {
+                if (existingEnrollment) {
                     throw new appError(
-                        `Tutee ${tuteeUserId} is already signed up for lesson ${lessonToEnroll.lessonId}`,
+                        'Duplicate enrollment detected',
                         400,
                         'ALREADY_SIGNED_UP',
                         'LessonModel:signUpTutee'
@@ -422,12 +416,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                console.log('-----------------------------------------------------------------');
-                console.log('-----------------------------------------------------------------');
-                console.log(error);
-                console.log('-----------------------------------------------------------------');
-                console.log('-----------------------------------------------------------------');
-                throw new appError('Could not enroll right now. Please try again.', 409, 'SIGNUP_CONFLICT', 'LessonModel:signUpTutee');
+                throw new appError('Enrollment failed', 409, 'SIGNUP_CONFLICT', 'LessonModel:signUpTutee');
             }
         }
 
@@ -448,7 +437,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to withdraw tutee from lesson', 500, 'WITHDRAW_ERROR', 'lesson-model:withdrawFromLesson');
+                throw new appError('Withdrawal failed', 500, 'WITHDRAW_ERROR', 'lesson-model:withdrawFromLesson');
             }
         }
 
@@ -466,7 +455,7 @@ module.exports = (sequelize) => {
                 });
                 return verdictPendingLessons;
             } catch (error) {
-                throw new appError('Failed to get verdict pending lessons', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-model:getVerdictPendingLessons');
+                throw new appError('Fetching verdict pending lessons failed', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-model:getVerdictPendingLessons');
             }
         }
 
@@ -492,7 +481,7 @@ module.exports = (sequelize) => {
                 if (error instanceof appError) {
                     throw error;
                 }
-                throw new appError('Failed to update lesson verdict', 500, 'UPDATE_VERDICT_ERROR', 'lesson-model:updateLessonVerdict');
+                throw new appError('Updating lesson verdict failed', 500, 'UPDATE_VERDICT_ERROR', 'lesson-model:updateLessonVerdict');
             }
         }
 
@@ -683,7 +672,7 @@ module.exports = (sequelize) => {
 
         if (openLessonCount >= MAX_OPEN_LESSONS_PER_TUTOR) {
             throw new appError(
-                `Tutor ${lesson.tutorUserId} has reached the maximum limit of ${MAX_OPEN_LESSONS_PER_TUTOR} open future lessons.`,
+                'Maximum limit of open future lessons reached',
                 409,
                 'LESSON_LIMIT_REACHED',
                 'LessonModel:validateLessonLimitsHook'
@@ -697,6 +686,7 @@ module.exports = (sequelize) => {
         // Define the time window (one hour before and after the appointed time)
         const oneHourBefore = new Date(appointedDateTime.getTime() - 60 * 60 * 1000); // One hour before
         const oneHourAfter = new Date(appointedDateTime.getTime() + 60 * 60 * 1000); // One hour after
+        const timeWindow = '1 hour';
 
         // Check if there are any existing lessons within this one-hour window
         const overlappingLessons = await Lesson.findAll({
@@ -712,7 +702,7 @@ module.exports = (sequelize) => {
 
         if (overlappingLessons.length > 0) {
             throw new appError(
-                `Tutor ${tutorUserId} already has a lesson scheduled within one hour of the appointed time.`,
+                `Conflict: another session within ${timeWindow} of this lesson.`,
                 409,
                 'OVERLAPPING_LESSON',
                 'LessonModel:validateNoOverlappingLessonsHook'
@@ -725,7 +715,7 @@ module.exports = (sequelize) => {
         if (lesson.changed('status')) {
             const previousStatus = lesson.previous('status');
             if (previousStatus === LESSON_STATUS.APPROVED || previousStatus === LESSON_STATUS.NOTAPPROVED || previousStatus === LESSON_STATUS.CANCELED) {
-                throw new ValidationError(`Cannot modify a lesson with status: ${previousStatus}`, [{ message: `Cannot modify the status of a ${previousStatus} lesson.`, type: 'Validation error', path: 'status', value: lesson.status }]);
+                throw new appError('Can not modify lesson in this stage', 409, 'INVALID_STATUS_UPDATE', 'lesson-model:preventInvalidUpdates');
             }
         }
     });

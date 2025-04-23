@@ -58,13 +58,14 @@ const cancelLesson = async (lessonId, tutorUserId) => {
             throw new appError('Unauthorized: Only the assigned tutor can cancel the lesson', 403, 'UNAUTHORIZED', 'lesson-service:cancelLesson');
         }
         if (lessonToCancel.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson cannot be canceled in its current status: ${lessonToCancel.status}`, 400, 'INVALID_STATUS', 'lesson-service:cancelLesson');
+            throw new appError('Lesson cannot be canceled in this stage', 400, 'INVALID_STATUS', 'lesson-service:cancelLesson');
         }
 
         const THREE_HOURS_BEFORE_APPOINTMENT = new Date(lessonToCancel.appointedDateTime - (3 * 60 * 60 * 1000));
+        const cancellationWindow = '3 hours';
         const NOW = new Date();
         if (NOW > THREE_HOURS_BEFORE_APPOINTMENT) {
-            throw new appError('Cannot cancel a lesson less than 3 hours before its appointed time', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
+            throw new appError(`Cancellation not allowed within ${cancellationWindow} of the lesson`, 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
         }
 
         const result = await Lesson.cancelLesson(lessonToCancel);
@@ -95,10 +96,10 @@ const editLesson = async (lessonId, tutorUserId, description, format, locationOr
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:editLesson');
         }
         if (lessonToEdit.tutorUserId !== tutorUserId) {
-            throw new appError('Unauthorized: Only the assigned tutor can edit the lesson', 403, 'UNAUTHORIZED', 'lesson-service:editLesson');
+            throw new appError('Unauthorized: Only assigned tutor can edit lesson', 403, 'UNAUTHORIZED', 'lesson-service:editLesson');
         }
         if (lessonToEdit.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson cannot be edited in its current status: ${lessonToEdit.status}`, 400, 'INVALID_STATUS', 'lesson-service:editLesson');
+            throw new appError('Lesson cannot be edited in this stage', 400, 'INVALID_STATUS', 'lesson-service:editLesson');
         }
         const updatedLesson = await Lesson.editLesson(lessonToEdit, description, format, locationOrLink);
         return updatedLesson;
@@ -120,7 +121,7 @@ const getAmountOfApprovedLessons = async (tutorUserId) => {
         const amountOfApprovedLessons = await Lesson.getAmountOfApprovedLessons(tutorUserId);
         return amountOfApprovedLessons;
     } catch (error) {
-        throw new appError('Failed to get amount of approved lessons', 500, 'GET_AMOUNT_OF_APPROVED_LESSONS_ERROR', 'lesson-service:getAmountOfApprovedLessons');
+        throw new appError('Fetching approved lessons amount failed', 500, 'GET_AMOUNT_OF_APPROVED_LESSONS_ERROR', 'lesson-service:getAmountOfApprovedLessons');
     }
 }
 
@@ -138,7 +139,7 @@ const getLessonsOfTutor = async (tutorUserId, lessonCategory) => {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to get lessons of tutor', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutor');
+        throw new appError('Fetching lessons failed', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutor');
     }
 };
 
@@ -158,23 +159,23 @@ const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutor
         }
         // Authorization check
         if (lessonToUploadReport.tutorUserId !== tutorUserId) {
-            throw new appError('Unauthorized: Only the assigned tutor can upload a lesson report', 403, 'UNAUTHORIZED', 'lesson-service:uploadLessonReport');
+            throw new appError('Unauthorized: Only assigned user can upload report', 403, 'UNAUTHORIZED', 'lesson-service:uploadLessonReport');
         }
         // Status check
         if (lessonToUploadReport.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson report cannot be uploaded in its current status: ${lessonToUploadReport.status}`, 400, 'INVALID_STATUS', 'lesson-service:uploadLessonReport');
+            throw new appError('Cannot upload lesson report in this stage', 400, 'INVALID_STATUS', 'lesson-service:uploadLessonReport');
         }
         // Time check
         const LESSON_END_TIME = new Date(lessonToUploadReport.appointedDateTime + (1 * 60 * 60 * 1000)); // apoointed time + 1 hour
         const NOW = new Date();
         if (LESSON_END_TIME > NOW) {
-            throw new appError('Cannot upload a lesson report before the lesson has ended', 400, 'LESSON_NOT_ENDED', 'lesson-service:uploadLessonReport');
+            throw new appError('Cannot upload lesson report before lesson has ended', 400, 'LESSON_NOT_ENDED', 'lesson-service:uploadLessonReport');
         }
         // Add enrolled tutees check
         const hasTutees = await TuteeLesson.hasEnrolledTutees(lessonId);
         if (!hasTutees) {
             throw new appError(
-                'Cannot upload a report for a lesson without enrolled tutees',
+                'Report upload failed: lesson has no participants.',
                 400,
                 'NO_ENROLLED_TUTEES',
                 'lesson-service:uploadLessonReport'
@@ -186,7 +187,7 @@ const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutor
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to upload lesson report', 500, 'UPLOAD_REPORT_ERROR', 'lesson-service:uploadLessonReport');
+        throw new appError('Uploading report failed', 500, 'UPLOAD_REPORT_ERROR', 'lesson-service:uploadLessonReport');
     }
 };
 
@@ -209,7 +210,7 @@ const searchAvailableLessons = async (subject, grade, level, tuteeUserId) => {
             throw error;
         }
         throw new appError(
-            'Failed to get available lessons',
+            'Lesson search failed',
             500,
             'GET_AVAILABLE_ERROR',
             'lesson-service:getAvailableLessons'
@@ -231,7 +232,7 @@ const getLessonsOfTutee = async (tuteeUserId, lessonCategory) => {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to get lessons of tutee', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutee');
+        throw new appError('Fetching lessons failed', 500, 'SERVICE_ERROR', 'lesson-service:getLessonsOfTutee');
     }
 };
 
@@ -251,7 +252,7 @@ const enrollToLesson = async (lessonId, tuteeUserId, tuteeFullName, tuteeEmail) 
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:enrollToLesson');
         }
         if (lessonToEnroll.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson is in an invalid status: ${lessonToEnroll.status}`, 400, 'INVALID_STATUS', 'lesson-service:enrollToLesson');
+            throw new appError('Cannot enroll to this lesson in this stage', 400, 'INVALID_STATUS', 'lesson-service:enrollToLesson');
         }
         if (lessonToEnroll.appointedDateTime <= new Date()) {
             throw new appError('Cannot sign up for past lesson', 400, 'TIME_PASSED', 'lesson-service:enrollToLesson');
@@ -263,7 +264,7 @@ const enrollToLesson = async (lessonId, tuteeUserId, tuteeFullName, tuteeEmail) 
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to enroll tutee to lesson', 500, 'ENROLL_ERROR', 'lesson-service:enrollToLesson');
+        throw new appError('Enrollment failed', 500, 'ENROLL_ERROR', 'lesson-service:enrollToLesson');
     }
 };
 
@@ -282,12 +283,13 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         if (lessonToWithdraw.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Lesson cannot be withdrawn in its current status: ${lessonToWithdraw.status}`, 400, 'INVALID_STATUS', 'lesson-service:withdrawFromLesson');
+            throw new appError('Lesson cannot be withdrawn in this stage', 400, 'INVALID_STATUS', 'lesson-service:withdrawFromLesson');
         }
         const THREE_HOURS_BEFORE_APPOINTMENT = new Date(lessonToWithdraw.appointedDateTime - (3 * 60 * 60 * 1000));
         const NOW = new Date();
+        const withdrawalWindow = '3 hours';
         if (NOW > THREE_HOURS_BEFORE_APPOINTMENT) {
-            throw new appError('Cannot withdraw from a lesson less than 3 hours before its appointed time', 400, 'TIME_PASSED', 'lesson-service:withdrawFromLesson');
+            throw new appError(`Withdrawal not allowed within ${withdrawalWindow} of the lesson`, 400, 'TIME_PASSED', 'lesson-service:withdrawFromLesson');
         }
 
         const lessonInTuteeLesson = await TuteeLesson.findOne({
@@ -298,7 +300,7 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
         });
 
         if (!lessonInTuteeLesson) {
-            throw new appError('You are not enrolled in this lesson', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
+            throw new appError('Enrollment not found', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         const result = await Lesson.withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson);
 
@@ -307,7 +309,7 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to withdraw tutee from lesson', 500, 'WITHDRAW_ERROR', 'lesson-service:withdrawFromLesson');
+        throw new appError('Withdrawal failed', 500, 'WITHDRAW_ERROR', 'lesson-service:withdrawFromLesson');
     }
 };
 
@@ -328,7 +330,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
         }
 
         if (lesson.status !== LESSON_STATUS.CREATED) {
-            throw new appError(`Cannot review a lesson in its current status: ${lesson.status}`, 400, 'INVALID_LESSON_STATE', 'lesson-service:addReview');
+            throw new appError('Cannot review lesson in this stage', 400, 'INVALID_LESSON_STATE', 'lesson-service:addReview');
         }
 
         // Fetch the tuteeLesson record
@@ -340,7 +342,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
         });
 
         if (!tuteeInLessonToReview) {
-            throw new appError('You are not enrolled in this lesson', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
+            throw new appError('Enrollment in this lesson not found', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
         }
 
         const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 1 * 60 * 60 * 1000);
@@ -349,7 +351,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
 
         if (NOW < ONE_HOUR_AFTER_APPOINTMENT) {
             throw new appError(
-                'You can only submit a review at least 1 hour after the lesson time.',
+                'Review window not yet open.',
                 400,
                 'TOO_EARLY_TO_REVIEW',
                 'lesson-service:addReview'
@@ -358,7 +360,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
 
         if (NOW > SEVEN_DAYS_AFTER_APPOINTMENT) {
             throw new appError(
-                'The review period has expired. You can only review a lesson within 7 days of its scheduled time.',
+                'Review period expired',
                 403,
                 'REVIEW_PERIOD_EXPIRED',
                 'lesson-service:addReview'
@@ -367,7 +369,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
 
         // Check if review already exists in the TuteeLesson record
         if (tuteeInLessonToReview.clarity && tuteeInLessonToReview.understanding && tuteeInLessonToReview.focus && tuteeInLessonToReview.helpful) {
-            throw new appError('Review already submitted for this lesson', 409, 'REVIEW_EXISTS', 'lesson-service:addReview');
+            throw new appError('Review submission rejected: already recorded', 409, 'REVIEW_EXISTS', 'lesson-service:addReview');
         }
 
         // Update the record with the review ratings
@@ -378,7 +380,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to add review', 500, 'ADD_REVIEW_ERROR', 'lesson-service:addReview');
+        throw new appError('Review submission failed', 500, 'ADD_REVIEW_ERROR', 'lesson-service:addReview');
     }
 };
 
@@ -396,7 +398,7 @@ const getVerdictPendingLessons = async () => {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to get verdict pending lessons', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-service:getVerdictPendingLessons');
+        throw new appError('Fetching verdict pending lessons failed', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-service:getVerdictPendingLessons');
     }
 }
 
@@ -414,7 +416,7 @@ const updateLessonVerdict = async (lessonId, isApproved) => {
         if (error instanceof appError) {
             throw error;
         }
-        throw new appError('Failed to update lesson verdict', 500, 'UPDATE_VERDICT_ERROR', 'lesson-service:updateLessonVerdict');
+        throw new appError('Updating verdict failed', 500, 'UPDATE_VERDICT_ERROR', 'lesson-service:updateLessonVerdict');
     }
 }
 
