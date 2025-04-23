@@ -289,6 +289,22 @@ const uploadLessonReportSchema = Joi.object({
             'any.required': 'Tutees presence is required'
         })
 });
+const updateLessonVerdictSchema = Joi.object({
+    lessonId: Joi.number()
+        .integer()
+        .required()
+        .messages({
+            'number.base': 'Lesson ID must be a number',
+            'number.integer': 'Lesson ID must be an integer',
+            'any.required': 'Lesson ID is required'
+        }),
+    isApproved: Joi.boolean()
+        .required()
+        .messages({
+            'boolean.base': 'isApproved must be a boolean value',
+            'any.required': 'isApproved is required'
+        })
+});
 
 
 module.exports = {
@@ -300,5 +316,6 @@ module.exports = {
     withdrawLessonSchema,
     editLessonSchema,
     uploadLessonReportSchema,
-    addReviewSchema
+    addReviewSchema,
+    updateLessonVerdictSchema
 };

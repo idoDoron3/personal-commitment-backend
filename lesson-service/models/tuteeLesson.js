@@ -64,6 +64,22 @@ module.exports = (sequelize) => {
             }
         }
 
+        static async hasEnrolledTutees(lessonId) {
+            try {
+                const count = await this.count({
+                    where: { lessonId: lessonId }
+                });
+                return count > 0;
+            } catch (error) {
+                throw new appError(
+                    'Failed to check for enrolled tutees',
+                    500,
+                    'CHECK_ENROLLED_ERROR',
+                    'tuteeLesson-model:hasEnrolledTutees'
+                );
+            }
+        }
+
         static async addReview(tuteeLessonToReview, clarity, understanding, focus, helpful) {
             const transaction = await sequelize.transaction();
             try {

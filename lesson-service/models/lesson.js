@@ -19,9 +19,11 @@ const LESSON_FORMAT = {
 };
 const lessonFormatValues = Object.values(LESSON_FORMAT);
 
+// !
+// TODO: deciedd on agreed limits
 const MAX_TUTEES_PER_LESSON = 2;
-const MAX_OPEN_LESSONS_PER_TUTOR = 2;
-const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 2;
+const MAX_OPEN_LESSONS_PER_TUTOR = 10;
+const MAX_SIGNEDUP_LESSONS_PER_TUTEE = 10;
 
 module.exports = (sequelize) => {
     class Lesson extends Model {
@@ -123,7 +125,7 @@ module.exports = (sequelize) => {
         static async getLessonsOfTutor(tutorUserId, lessonCategory) {
             try {
                 const now = new Date();
-                const THREE_DAYS_AGO = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000)); // 3 days ago
+                const ONE_HOUR_AGO = new Date(now.getTime() - (1 * 60 * 60 * 1000)); // ensure lessons are finished before allowing a review.
                 let whereClause = {
                     tutorUserId: tutorUserId
                 };
@@ -136,7 +138,7 @@ module.exports = (sequelize) => {
                 } else if (lessonCategory === 'summaryPending') {
                     whereClause.status = LESSON_STATUS.CREATED;
                     whereClause.appointedDateTime = {
-                        [Op.lt]: THREE_DAYS_AGO // Older than 3 days
+                        [Op.lt]: ONE_HOUR_AGO // Older than 1 hour
                     };
                 } else {
                     throw new appError(`Invalid lesson category: ${lessonCategory}`, 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutor');
@@ -154,6 +156,17 @@ module.exports = (sequelize) => {
                     ]
                 });
 
+                // For summaryPending lessons, filter out those without enrolled tutees
+                if (lessonCategory === 'summaryPending') {
+                    const lessonsWithTutees = await Promise.all(
+                        lessons.map(async (lesson) => {
+                            const hasTutees = await sequelize.models.TuteeLesson.hasEnrolledTutees(lesson.lessonId);
+                            return hasTutees ? lesson : null;
+                        })
+                    );
+                    return lessonsWithTutees.filter(lesson => lesson !== null);
+                }
+
                 return lessons;
             } catch (error) {
                 if (error instanceof appError) {
@@ -163,20 +176,23 @@ module.exports = (sequelize) => {
             }
         }
 
-        static async uploadLessonReport(lessonToUpdate, lessonSummary, tuteesPresence, tutorUserId) {
+        static async uploadLessonReport(lessonToUpdate, lessonSummary, tuteesPresence) {
             const transaction = await sequelize.transaction();
             try {
-
                 await lessonToUpdate.reload({
                     transaction,
                     lock: transaction.LOCK.UPDATE
                 });
 
-                // Update lesson summary and status
+                // Update lesson summary
                 lessonToUpdate.summary = lessonSummary;
-                lessonToUpdate.status = LESSON_STATUS.COMPLETED;
-                await lessonToUpdate.save({ transaction });
 
+                // Check if any tutee was present
+                const hasPresentTutees = Object.values(tuteesPresence).some(presence => presence === true);
+                // Set status based on tutee presence
+                lessonToUpdate.status = hasPresentTutees ? LESSON_STATUS.COMPLETED : LESSON_STATUS.UNATTENDED;
+
+                await lessonToUpdate.save({ transaction });
                 // Delegate presence verification and updates to TuteeLesson model
                 await sequelize.models.TuteeLesson.updatePresenceForLesson(
                     lessonToUpdate.lessonId,
@@ -255,7 +271,8 @@ module.exports = (sequelize) => {
         static async getLessonsOfTutee(tuteeUserId, lessonCategory) {
             try {
                 const now = new Date();
-                const THREE_DAYS_AGO = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000)); // 3 days ago
+                const ONE_HOUR_AGO = new Date(now.getTime() - (1 * 60 * 60 * 1000)); // ensure Lessons are finished before allowing a review.
+                const SEVEN_DAYS_AGO = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 days ago
                 let whereClause = {
                     status: LESSON_STATUS.CREATED
                 };
@@ -267,8 +284,8 @@ module.exports = (sequelize) => {
                 } else if (lessonCategory === 'reviewPending') {
                     whereClause.appointedDateTime = {
                         [Op.and]: [
-                            { [Op.lt]: now },         // Past dates
-                            { [Op.gte]: THREE_DAYS_AGO } // But not older than 3 days
+                            { [Op.lt]: ONE_HOUR_AGO },         // Past dates
+                            { [Op.gte]: SEVEN_DAYS_AGO } // But not older than 7 days
                         ]
                     };
                 } else {
@@ -422,6 +439,51 @@ module.exports = (sequelize) => {
                 throw new appError('Failed to withdraw tutee from lesson', 500, 'WITHDRAW_ERROR', 'lesson-model:withdrawFromLesson');
             }
         }
+
+
+        //* ADMIN
+
+        static async getVerdictPendingLessons() {
+            try {
+                const verdictPendingLessons = await Lesson.findAll({
+                    where: {
+                        status: {
+                            [Op.or]: [LESSON_STATUS.COMPLETED, LESSON_STATUS.UNATTENDED]
+                        }
+                    }
+                });
+                return verdictPendingLessons;
+            } catch (error) {
+                throw new appError('Failed to get verdict pending lessons', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-model:getVerdictPendingLessons');
+            }
+        }
+
+        static async updateLessonVerdict(lessonId, isApproved) {
+            const transaction = await sequelize.transaction();
+            try {
+                const lesson = await Lesson.findByPk(lessonId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                if (!lesson) {
+                    throw new appError('Lesson not found', 404, 'LESSON_NOT_FOUND', 'lesson-model:updateLessonVerdict');
+                }
+
+                lesson.status = isApproved ? LESSON_STATUS.APPROVED : LESSON_STATUS.NOTAPPROVED;
+                await lesson.save({ transaction });
+
+                await transaction.commit();
+                return lesson;
+            } catch (error) {
+                await transaction.rollback();
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Failed to update lesson verdict', 500, 'UPDATE_VERDICT_ERROR', 'lesson-model:updateLessonVerdict');
+            }
+        }
+
     }
 
     Lesson.init({
@@ -645,7 +707,7 @@ module.exports = (sequelize) => {
             );
         }
     });
-
+    // TODO: read again 
     Lesson.addHook('beforeUpdate', 'preventInvalidUpdates', async (lesson, options) => {
         // Prevent status changes if lesson is in a terminal state for updates
         if (lesson.changed('status')) {

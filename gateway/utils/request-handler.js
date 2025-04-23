@@ -67,10 +67,10 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Add Cookies to headers if available
-    if (req.headers.cookie) {
-      headers["Cookie"] = req.headers.cookie;
-    }
+    // // Add Cookies to headers if available
+    // if (req.headers.cookie) {
+    //   headers["Cookie"] = req.headers.cookie;
+    // }
 
     //Forward the request to the specified service and endpoint
     const response = await axios({
@@ -81,15 +81,15 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       withCredentials: true, //  adding cookies, if not working delete this
     });
 
-    // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת
-    if (routesRequiringCookies.has(endpoint)) {
-      const cookies = response.headers["set-cookie"];
-      if (cookies) {
-        cookies.forEach((cookie) => {
-          res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
-        });
-      }
-    }
+    // // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת
+    // if (routesRequiringCookies.has(endpoint)) {
+    //   const cookies = response.headers["set-cookie"];
+    //   if (cookies) {
+    //     cookies.forEach((cookie) => {
+    //       res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
+    //     });
+    //   }
+    // }
 
     // Return the response from the microservice
     res.status(response.status).json(response.data);

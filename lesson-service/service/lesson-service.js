@@ -51,7 +51,6 @@ const createLesson = async ({ subjectName, grade, level, description, tutorUserI
 const cancelLesson = async (lessonId, tutorUserId) => {
     try {
         const lessonToCancel = await Lesson.findByPk(lessonId);
-
         if (!lessonToCancel) {
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:cancelLesson');
         }
@@ -61,8 +60,11 @@ const cancelLesson = async (lessonId, tutorUserId) => {
         if (lessonToCancel.status !== LESSON_STATUS.CREATED) {
             throw new appError(`Lesson cannot be canceled in its current status: ${lessonToCancel.status}`, 400, 'INVALID_STATUS', 'lesson-service:cancelLesson');
         }
-        if (lessonToCancel.appointedDateTime <= new Date()) {
-            throw new appError('Cannot cancel a lessons whose appointed time has passed', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
+
+        const THREE_HOURS_BEFORE_APPOINTMENT = new Date(lessonToCancel.appointedDateTime - (3 * 60 * 60 * 1000));
+        const NOW = new Date();
+        if (NOW > THREE_HOURS_BEFORE_APPOINTMENT) {
+            throw new appError('Cannot cancel a lesson less than 3 hours before its appointed time', 400, 'TIME_PASSED', 'lesson-service:cancelLesson');
         }
 
         const result = await Lesson.cancelLesson(lessonToCancel);
@@ -154,17 +156,31 @@ const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutor
         if (!lessonToUploadReport) {
             throw new appError('Lesson not found', 404, 'NOT_FOUND', 'lesson-service:uploadLessonReport');
         }
+        // Authorization check
         if (lessonToUploadReport.tutorUserId !== tutorUserId) {
             throw new appError('Unauthorized: Only the assigned tutor can upload a lesson report', 403, 'UNAUTHORIZED', 'lesson-service:uploadLessonReport');
         }
+        // Status check
         if (lessonToUploadReport.status !== LESSON_STATUS.CREATED) {
             throw new appError(`Lesson report cannot be uploaded in its current status: ${lessonToUploadReport.status}`, 400, 'INVALID_STATUS', 'lesson-service:uploadLessonReport');
         }
-        if (lessonToUploadReport.appointedDateTime > new Date()) {
-            throw new appError('Cannot upload a lesson report for a lesson whose not occurred yet', 400, 'LESSON_NOT_OCCURRED', 'lesson-service:uploadLessonReport');
+        // Time check
+        const LESSON_END_TIME = new Date(lessonToUploadReport.appointedDateTime + (1 * 60 * 60 * 1000)); // apoointed time + 1 hour
+        const NOW = new Date();
+        if (LESSON_END_TIME > NOW) {
+            throw new appError('Cannot upload a lesson report before the lesson has ended', 400, 'LESSON_NOT_ENDED', 'lesson-service:uploadLessonReport');
         }
-
-        const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence, tutorUserId);
+        // Add enrolled tutees check
+        const hasTutees = await TuteeLesson.hasEnrolledTutees(lessonId);
+        if (!hasTutees) {
+            throw new appError(
+                'Cannot upload a report for a lesson without enrolled tutees',
+                400,
+                'NO_ENROLLED_TUTEES',
+                'lesson-service:uploadLessonReport'
+            );
+        }
+        const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence);
         return updatedLesson;
     } catch (error) {
         if (error instanceof appError) {
@@ -259,7 +275,6 @@ const enrollToLesson = async (lessonId, tuteeUserId, tuteeFullName, tuteeEmail) 
  * @returns {Promise<Object>} The withdrawal result
  */
 const withdrawFromLesson = async (lessonId, tuteeUserId) => {
-
     try {
         const lessonToWithdraw = await Lesson.findByPk(lessonId);
 
@@ -269,8 +284,10 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
         if (lessonToWithdraw.status !== LESSON_STATUS.CREATED) {
             throw new appError('Lesson cannot be withdrawn in its current status: ${lessonToWithdraw.status}', 400, 'INVALID_STATUS', 'lesson-service:withdrawFromLesson');
         }
-        if (lessonToWithdraw.appointedDateTime <= new Date()) {
-            throw new appError('Cannot withdraw from a lesson whose appointed time has passed', 400, 'TIME_PASSED', 'lesson-service:withdrawFromLesson');
+        const THREE_HOURS_BEFORE_APPOINTMENT = new Date(lessonToWithdraw.appointedDateTime - (3 * 60 * 60 * 1000));
+        const NOW = new Date();
+        if (NOW > THREE_HOURS_BEFORE_APPOINTMENT) {
+            throw new appError('Cannot withdraw from a lesson less than 3 hours before its appointed time', 400, 'TIME_PASSED', 'lesson-service:withdrawFromLesson');
         }
 
         const lessonInTuteeLesson = await TuteeLesson.findOne({
@@ -326,6 +343,28 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
             throw new appError('You are not enrolled in this lesson', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
         }
 
+        const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 1 * 60 * 60 * 1000);
+        const SEVEN_DAYS_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 7 * 24 * 60 * 60 * 1000);
+        const NOW = new Date();
+
+        if (NOW < ONE_HOUR_AFTER_APPOINTMENT) {
+            throw new appError(
+                'You can only submit a review at least 1 hour after the lesson time.',
+                400,
+                'TOO_EARLY_TO_REVIEW',
+                'lesson-service:addReview'
+            );
+        }
+
+        if (NOW > SEVEN_DAYS_AFTER_APPOINTMENT) {
+            throw new appError(
+                'The review period has expired. You can only review a lesson within 7 days of its scheduled time.',
+                403,
+                'REVIEW_PERIOD_EXPIRED',
+                'lesson-service:addReview'
+            );
+        }
+
         // Check if review already exists in the TuteeLesson record
         if (tuteeInLessonToReview.clarity && tuteeInLessonToReview.understanding && tuteeInLessonToReview.focus && tuteeInLessonToReview.helpful) {
             throw new appError('Review already submitted for this lesson', 409, 'REVIEW_EXISTS', 'lesson-service:addReview');
@@ -343,6 +382,45 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
     }
 };
 
+//* Admin
+
+/**
+ * Get all verdict pending lessons
+ * @returns {Promise<Array>} Array of verdict pending lessons
+ */
+const getVerdictPendingLessons = async () => {
+    try {
+        const verdictPendingLessons = await Lesson.getVerdictPendingLessons();
+        return verdictPendingLessons;
+    } catch (error) {
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError('Failed to get verdict pending lessons', 500, 'GET_VERDICT_PENDING_LESSONS_ERROR', 'lesson-service:getVerdictPendingLessons');
+    }
+}
+
+/**
+ * Update the verdict of a lesson
+ * @param {number} lessonId - The ID of the lesson
+ * @param {boolean} isApproved - The verdict of the lesson
+ * @returns {Promise<Object>} The updated lesson
+ */
+const updateLessonVerdict = async (lessonId, isApproved) => {
+    try {
+        const updatedLesson = await Lesson.updateLessonVerdict(lessonId, isApproved);
+        return updatedLesson;
+    } catch (error) {
+        if (error instanceof appError) {
+            throw error;
+        }
+        throw new appError('Failed to update lesson verdict', 500, 'UPDATE_VERDICT_ERROR', 'lesson-service:updateLessonVerdict');
+    }
+}
+
+
+
+
 module.exports = {
     createLesson,
     cancelLesson,
@@ -354,5 +432,7 @@ module.exports = {
     getAmountOfApprovedLessons,
     editLesson,
     uploadLessonReport,
-    addReview
+    addReview,
+    getVerdictPendingLessons,
+    updateLessonVerdict
 };
