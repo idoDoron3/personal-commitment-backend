@@ -1,17 +1,25 @@
 {
-  "dependencies": {
-    "bcrypt": "^5.1.1",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "joi": "^17.13.3",
-    "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.12.0",
-    "sequelize": "^6.37.5",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
-  },
+  "name": "personal-commitment-backend",
+  "private": true,
+  "workspaces": [
+    "gateway",
+    "lesson-service",
+    "auth-service"
+  ],
   "devDependencies": {
-    "nodemon": "^3.1.9",
-    "sequelize-cli": "^6.6.2"
-  }
+    "lerna": "^8.2.2"
+  },
+  "scripts": {
+    "start": "lerna run start --stream",
+    "dev": "lerna run dev --stream",
+    "test": "lerna run test --stream",
+    "reset-db": "lerna run reset-db --scope=lesson-service",
+    "setup-db": "lerna run setup-db --scope=lesson-service"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idoDoron3/personal-commitment-backend.git"
+  },
+  "license": "ISC",
+  "type": "commonjs"
 }

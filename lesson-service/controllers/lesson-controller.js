@@ -25,6 +25,7 @@ exports.createLesson = async (req, res, next) => {
       message: 'Lesson created successfully',
       data: { lesson }
     });
+
   } catch (err) {
     next(err);
   }
@@ -251,3 +252,44 @@ exports.addReview = async (req, res, next) => {
     next(err);
   }
 };
+
+//* ADMIN
+
+/**
+ * @desc    Get all verdict pending lessons
+ * @route   GET /lessons/verdict-pending-lessons
+ * @access  Private (Admin only)
+ */
+exports.getVerdictPendingLessons = async (req, res, next) => {
+  try {
+    const verdictPendingLessons = await lessonService.getVerdictPendingLessons();
+
+    res.status(200).json({
+      success: true,
+      message: 'Verdict pending lessons retrieved successfully',
+      data: { verdictPendingLessons }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * @desc    Update a lesson verdict
+ * @route   PATCH /lessons/update-lesson-verdict
+ * @access  Private (Admin only)
+ */
+exports.updateLessonVerdict = async (req, res, next) => {
+  try {
+    const { lessonId, isApproved } = req.validatedBody;
+    const updatedLesson = await lessonService.updateLessonVerdict(lessonId, isApproved);
+
+    res.status(200).json({
+      success: true,
+      message: 'Lesson verdict updated successfully',
+      data: { updatedLesson }
+    });
+  } catch (err) {
+    next(err);
+  }
+}

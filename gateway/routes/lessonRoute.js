@@ -1044,20 +1044,13 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *                 example: "Today we covered quadratic equations and their applications. Students practiced solving word problems and graphing quadratic functions."
  *                 description: Detailed summary of what was covered in the lesson
  *               tuteesPresence:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - tuteeUserId
- *                     - presence
- *                   properties:
- *                     tuteeUserId:
- *                       type: string
- *                       example: "tutee123"
- *                     presence:
- *                       type: boolean
- *                       example: true
- *                 description: Array of tutees and their attendance status
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: boolean
+ *                 example:
+ *                   tutee123: true
+ *                   tutee456: false
+ *                 description: Object mapping tutee user IDs to their presence status (true for present, false for absent). All tutees must be enrolled in the lesson.
  *     responses:
  *       200:
  *         description: Lesson report uploaded successfully
@@ -1075,7 +1068,7 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *                 data:
  *                   type: object
  *                   properties:
- *                     updatedLesson:
+ *                     lesson:
  *                       type: object
  *                       properties:
  *                         lessonId:
@@ -1099,6 +1092,7 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *                           example: "2024-04-15T14:30:00Z"
  *                         status:
  *                           type: string
+ *                           enum: [completed, unattended]
  *                           example: "completed"
  *                         tutorUserId:
  *                           type: string
@@ -1108,15 +1102,66 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *                           example: "John Smith"
  *                         format:
  *                           type: string
+ *                           enum: [online, in-person]
  *                           example: "online"
  *                         locationOrLink:
  *                           type: string
  *                           example: "https://zoom.us/j/123456789"
  *                         summary:
  *                           type: string
- *                           example: "Today we covered quadratic equations and their applications. Students practiced solving word problems and graphing quadratic functions."
+ *                           example: "Today we covered quadratic equations and their applications."
+ *                         enrolledTutees:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               tuteeUserId:
+ *                                 type: string
+ *                                 example: "tutee123"
+ *                               tuteeFullName:
+ *                                 type: string
+ *                                 example: "Jane Doe"
+ *                               presence:
+ *                                 type: boolean
+ *                                 example: true
  *       400:
  *         description: Invalid request or lesson cannot be updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Cannot upload a lesson report before the lesson has ended"
+ *                     code:
+ *                       type: string
+ *                       example: LESSON_NOT_ENDED
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Cannot upload a report for a lesson without enrolled tutees"
+ *                     code:
+ *                       type: string
+ *                       example: NO_ENROLLED_TUTEES
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Lesson report cannot be uploaded in its current status: completed"
+ *                     code:
+ *                       type: string
+ *                       example: INVALID_STATUS
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "One or more tutees in the presence list are not enrolled in this lesson"
+ *                     code:
+ *                       type: string
+ *                       example: INVALID_TUTEE_LIST
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *       403:
+ *         description: Forbidden - User is not the tutor of this lesson
  *         content:
  *           application/json:
  *             schema:
@@ -1124,18 +1169,36 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Cannot upload a lesson report for a lesson whose not occurred yet"
+ *                   example: "Unauthorized: Only the assigned tutor can upload a lesson report"
  *                 code:
  *                   type: string
- *                   example: "LESSON_NOT_OCCURRED"
- *       401:
- *         description: Unauthorized - Invalid or missing authentication token
- *       403:
- *         description: Forbidden - User is not the tutor of this lesson
+ *                   example: UNAUTHORIZED
  *       404:
  *         description: Lesson not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson not found"
+ *                 code:
+ *                   type: string
+ *                   example: NOT_FOUND
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to upload lesson report"
+ *                 code:
+ *                   type: string
+ *                   example: UPLOAD_REPORT_ERROR
  */
 
 router.patch("/upload-lesson-report", authenticateToken, (req, res) =>
@@ -1371,7 +1434,7 @@ router.post("/available", authenticateToken, (req, res) =>
  *                           type: integer
  *                           example: 4
  *       400:
- *         description: Validation error or review already exists
+ *         description: Validation error, review already exists, or too early to review
  *         content:
  *           application/json:
  *             schema:
@@ -1379,25 +1442,32 @@ router.post("/available", authenticateToken, (req, res) =>
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Review already submitted for this lesson"
+ *                   example: "You can only submit a review at least 1 hour after the lesson time."
  *                 code:
  *                   type: string
- *                   example: REVIEW_EXISTS
+ *                   example: TOO_EARLY_TO_REVIEW
  *       401:
  *         description: Unauthorized - missing or invalid token
  *       403:
- *         description: Forbidden - tutee didn't attend the lesson
+ *         description: Forbidden - tutee didn't attend the lesson or review period expired
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "You are not enrolled in this lesson"
- *                 code:
- *                   type: string
- *                   example: NOT_ENROLLED
+ *               oneOf:
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "You are not enrolled in this lesson"
+ *                     code:
+ *                       type: string
+ *                       example: NOT_ENROLLED
+ *                 - properties:
+ *                     message:
+ *                       type: string
+ *                       example: "The review period has expired. You can only review a lesson within 7 days of its scheduled time."
+ *                     code:
+ *                       type: string
+ *                       example: REVIEW_PERIOD_EXPIRED
  *       404:
  *         description: Lesson not found
  *         content:
@@ -1411,6 +1481,19 @@ router.post("/available", authenticateToken, (req, res) =>
  *                 code:
  *                   type: string
  *                   example: LESSON_NOT_FOUND
+ *       409:
+ *         description: Review already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Review already submitted for this lesson"
+ *                 code:
+ *                   type: string
+ *                   example: REVIEW_EXISTS
  *       500:
  *         description: Internal server error
  *         content:
@@ -1429,5 +1512,235 @@ router.post("/available", authenticateToken, (req, res) =>
 router.patch("/review", authenticateToken, (req, res) =>
   gatewayController.handleRequest(req, res, "lesson", "/review")
 );
+
+/**
+ * @swagger
+ * /lessons/verdict-pending-lessons:
+ *   get:
+ *     summary: Get all lessons pending verdict (completed or unattended)
+ *     description: Retrieves all lessons that are in either COMPLETED or UNATTENDED status, waiting for admin verdict
+ *     tags: [Lessons]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved verdict pending lessons
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Verdict pending lessons retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     lessons:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           lessonId:
+ *                             type: integer
+ *                             example: 123
+ *                           subjectName:
+ *                             type: string
+ *                             example: "Mathematics"
+ *                           grade:
+ *                             type: string
+ *                             example: "10th Grade"
+ *                           level:
+ *                             type: string
+ *                             example: "Advanced"
+ *                           description:
+ *                             type: string
+ *                             example: "Introduction to Calculus"
+ *                           appointedDateTime:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2024-04-15T14:30:00Z"
+ *                           status:
+ *                             type: string
+ *                             enum: [completed, unattended]
+ *                             example: "completed"
+ *                           tutorUserId:
+ *                             type: string
+ *                             example: "tutor123"
+ *                           tutorFullName:
+ *                             type: string
+ *                             example: "John Smith"
+ *                           format:
+ *                             type: string
+ *                             enum: [online, in-person]
+ *                             example: "online"
+ *                           locationOrLink:
+ *                             type: string
+ *                             example: "https://zoom.us/j/123456789"
+ *                           summary:
+ *                             type: string
+ *                             example: "Covered basic calculus concepts"
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *       403:
+ *         description: Forbidden - User is not authorized to view verdict pending lessons
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get verdict pending lessons"
+ *                 code:
+ *                   type: string
+ *                   example: "GET_VERDICT_PENDING_LESSONS_ERROR"
+ */
+router.get("/verdict-pending-lessons", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/verdict-pending-lessons")
+);
+
+
+/**
+ * @swagger
+ * /lessons/update-lesson-verdict:
+ *   patch:
+ *     summary: Update the verdict of a lesson (Admin only)
+ *     description: Updates a lesson's status to either APPROVED or NOTAPPROVED based on the verdict. Only lessons in COMPLETED or UNATTENDED status can be updated.
+ *     tags: [Lessons]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lessonId
+ *               - isApproved
+ *             properties:
+ *               lessonId:
+ *                 type: integer
+ *                 example: 123
+ *                 description: The ID of the lesson to update
+ *               isApproved:
+ *                 type: boolean
+ *                 example: true
+ *                 description: true for APPROVED, false for NOTAPPROVED
+ *     responses:
+ *       200:
+ *         description: Successfully updated lesson verdict
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson verdict updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     lesson:
+ *                       type: object
+ *                       properties:
+ *                         lessonId:
+ *                           type: integer
+ *                           example: 123
+ *                         subjectName:
+ *                           type: string
+ *                           example: "Mathematics"
+ *                         grade:
+ *                           type: string
+ *                           example: "10th Grade"
+ *                         level:
+ *                           type: string
+ *                           example: "Advanced"
+ *                         description:
+ *                           type: string
+ *                           example: "Introduction to Calculus"
+ *                         appointedDateTime:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2024-04-15T14:30:00Z"
+ *                         status:
+ *                           type: string
+ *                           enum: [approved, notapproved]
+ *                           example: "approved"
+ *                         tutorUserId:
+ *                           type: string
+ *                           example: "tutor123"
+ *                         tutorFullName:
+ *                           type: string
+ *                           example: "John Smith"
+ *                         format:
+ *                           type: string
+ *                           enum: [online, in-person]
+ *                           example: "online"
+ *                         locationOrLink:
+ *                           type: string
+ *                           example: "https://zoom.us/j/123456789"
+ *                         summary:
+ *                           type: string
+ *                           example: "Covered basic calculus concepts"
+ *       400:
+ *         description: Invalid request or lesson cannot be updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson must be in COMPLETED or UNATTENDED status to update verdict"
+ *                 code:
+ *                   type: string
+ *                   example: "INVALID_STATUS"
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *       403:
+ *         description: Forbidden - User is not authorized to update lesson verdicts
+ *       404:
+ *         description: Lesson not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lesson not found"
+ *                 code:
+ *                   type: string
+ *                   example: "LESSON_NOT_FOUND"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update lesson verdict"
+ *                 code:
+ *                   type: string
+ *                   example: "UPDATE_VERDICT_ERROR"
+ */
+router.patch("/update-lesson-verdict", authenticateToken, (req, res) =>
+  gatewayController.handleRequest(req, res, "lesson", "/update-lesson-verdict")
+);
+
+
+
 
 module.exports = router;
