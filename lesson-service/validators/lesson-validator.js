@@ -283,8 +283,10 @@ const uploadLessonReportSchema = Joi.object({
                     })
             })
         )
+        .min(1)
         .required()
         .messages({
+            'array.min': 'Tutees presence cannot be empty',
             'array.base': 'Tutees presence must be an array',
             'any.required': 'Tutees presence is required'
         })
