@@ -255,7 +255,7 @@ const enrollToLesson = async (lessonId, tuteeUserId, tuteeFullName, tuteeEmail) 
             throw new appError('Cannot enroll to this lesson in this stage', 400, 'INVALID_STATUS', 'lesson-service:enrollToLesson');
         }
         if (lessonToEnroll.appointedDateTime <= new Date()) {
-            throw new appError('Cannot sign up for past lesson', 400, 'TIME_PASSED', 'lesson-service:enrollToLesson');
+            throw new appError('Cannot enroll for past lesson', 400, 'TIME_PASSED', 'lesson-service:enrollToLesson');
         }
         // Delegate to model layer for data operations and synchronization
         const result = await Lesson.enrollToLesson(lessonToEnroll, tuteeUserId, tuteeFullName, tuteeEmail);

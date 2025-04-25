@@ -151,9 +151,7 @@ exports.searchAvailableLessons = async (req, res, next) => {
   try {
     const { subjectName, grade, level } = req.validatedBody;
     const tuteeUserId = req.userId;
-
     const lessons = await lessonService.searchAvailableLessons(subjectName, grade, level, tuteeUserId);
-
     res.status(200).json({
       success: true,
       message: 'Available lessons retrieved successfully',
@@ -219,9 +217,7 @@ exports.withdrawFromLesson = async (req, res, next) => {
   try {
     const tuteeUserId = req.userId;
     const { lessonId } = req.validatedBody;
-
     const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeUserId);
-
     res.status(200).json({
       success: true,
       message: 'Withdrawn from lesson successfully',
@@ -242,7 +238,6 @@ exports.addReview = async (req, res, next) => {
     const tuteeUserId = req.userId; // From JWT via middleware
     const { lessonId, clarity, understanding, focus, helpful } = req.validatedBody;
     const result = await lessonService.addReview(lessonId, tuteeUserId, clarity, understanding, focus, helpful);
-
     res.status(201).json({
       success: true,
       message: 'Review added successfully',
@@ -263,7 +258,6 @@ exports.addReview = async (req, res, next) => {
 exports.getVerdictPendingLessons = async (req, res, next) => {
   try {
     const verdictPendingLessons = await lessonService.getVerdictPendingLessons();
-
     res.status(200).json({
       success: true,
       message: 'Verdict pending lessons retrieved successfully',
@@ -283,7 +277,6 @@ exports.updateLessonVerdict = async (req, res, next) => {
   try {
     const { lessonId, isApproved } = req.validatedBody;
     const updatedLesson = await lessonService.updateLessonVerdict(lessonId, isApproved);
-
     res.status(200).json({
       success: true,
       message: 'Lesson verdict updated successfully',
