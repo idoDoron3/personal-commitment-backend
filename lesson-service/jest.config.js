@@ -4,7 +4,9 @@ module.exports = {
     testMatch: ['**/*.test.js'],
     collectCoverageFrom: [
         'controllers/**/*.js',
-        'validators/**/*.js'  // Added validators
+        'validators/**/*.js',
+        'service/**/*.js',
+        'models/**/*.js'
     ],
     coverageDirectory: 'coverage',
     setupFilesAfterEnv: ['<rootDir>/tests/helpers/testSetup.js'],
@@ -15,8 +17,6 @@ module.exports = {
     forceCoverageMatch: ['**/*.js'],
     coveragePathIgnorePatterns: [
         '/node_modules/',
-        '/models/',
-        '/service/',
         '/utils/',
         '/tests/'
     ],
@@ -33,12 +33,25 @@ module.exports = {
         //     lines: 100,
         //     statements: 100
         // }
-        './services/**/*.js': {
-            branches: 80,
-            functions: 80,
-            lines: 80,
-            statements: 80
-        }
+        // './service/**/*.js': {
+        //     branches: 80,
+        //     functions: 80,
+        //     lines: 80,
+        //     statements: 80
+        // },
+        './models/lesson.js': {
+            branches: 75,
+            functions: 75,
+            lines: 75,
+            statements: 75
+        },
+        './models/tuteeLesson.js': {
+            branches: 75,
+            functions: 75,
+            lines: 75,
+            statements: 75
+        },
+
     },
     verbose: true,
     collectCoverage: true,
