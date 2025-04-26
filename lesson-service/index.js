@@ -6,6 +6,7 @@ const swaggerUi = require("swagger-ui-express");
 const lessonRoutes = require("./routes/lessonRoute");
 const { sequelize } = require('./models');
 const { errorHandler } = require("./utils/errors/errorHandler");
+const { initRabbitMQ } = require('./messaging/producer');
 
 require("dotenv").config(); // Load env variables from .env
 
@@ -26,6 +27,12 @@ async function initializeDatabase() {
     process.exit(1); // Exit if we can't connect to database
   }
 }
+
+initRabbitMQ().catch(err => {
+  console.error("❌ Could not connect to RabbitMQ. Exiting...");
+  process.exit(1);
+});
+
 
 // Middleware
 app.use(

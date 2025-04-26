@@ -1,6 +1,7 @@
 const { Lesson, TuteeLesson } = require('../models');
 const appError = require('../utils/errors/appError');
 const { LESSON_STATUS } = require('../models/lesson');
+const { publishEvent } = require('../messaging/producer');
 
 //*Tutor
 /**
@@ -31,6 +32,12 @@ const createLesson = async ({ subjectName, grade, level, description, tutorUserI
             appointedDateTime,
             format,
             locationOrLink,
+        });
+        console.log("======publush create lesson=========");
+        await publishEvent('lesson.created', {
+            eventType: 'lesson.created',
+            occurredAt: new Date(),
+            data: lessonToCreate.toJSON()
         });
 
         return lessonToCreate;
@@ -69,6 +76,12 @@ const cancelLesson = async (lessonId, tutorUserId) => {
         }
 
         const result = await Lesson.cancelLesson(lessonToCancel);
+        console.log("======publush cancel lesson=========");
+        await publishEvent('lesson.canceled', {
+            eventType: 'lesson.canceled',
+            occurredAt: new Date(),
+            data: result.toJSON()
+        });
         return result;
     } catch (error) {
         if (error instanceof appError) {
@@ -182,7 +195,21 @@ const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutor
             );
         }
         const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence);
+        console.log("======publush mentor review=========");
+        await publishEvent('mentor.review.published', {
+            eventType: 'mentor.review.published',
+            occurredAt: new Date(),
+            data: {
+                lessonId: lessonId,
+                tutorId: tutorUserId,
+                report: {
+                    summary: lessonSummary,
+                    tuteesPresence: tuteesPresence
+                }
+            }
+        });
         return updatedLesson;
+        
     } catch (error) {
         if (error instanceof appError) {
             throw error;
