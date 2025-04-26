@@ -4,7 +4,6 @@ const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
 const lessonRoutes = require("./routes/lessonRoute");
 const aggregatorRoutes = require("./routes/aggregator-router");
-const mockLessonsRoutes = require("./routes/mockLessonsRoutes")
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors"); // ייבוא CORS
