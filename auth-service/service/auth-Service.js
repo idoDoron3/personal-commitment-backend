@@ -85,7 +85,7 @@ exports.loginUser = async (email, password) => {
 // Refreshes the access token
 exports.refreshAccessToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
+    const { refreshToken } = req.body;
     if (!refreshToken) {
       throw new Error("Refresh token not provided");
     }
@@ -108,7 +108,7 @@ exports.refreshAccessToken = async (req, res) => {
     );
 
     const newRefreshToken = jwt.sign(
-      { id: user._id },
+      { id: user._id, role: user.role },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
     );
@@ -118,16 +118,20 @@ exports.refreshAccessToken = async (req, res) => {
       Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
     );
     await tokenRecord.save();
+    console.log("✅ Refresh token updated in DB for user:", user._id);
 
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
+    // res.cookie("refreshToken", newRefreshToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "Strict",
+    //   maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
+    // });
+
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
     });
-
-    return res.status(200).json({ accessToken: newAccessToken });
-  } catch (error) {
+    } catch (error) {
     console.error("Error in refreshAccessToken:", error.message);
     return res.status(401).json({ error: error.message });
   }

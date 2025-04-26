@@ -30,7 +30,12 @@ exports.authenticateToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    // Token verification failed (invalid or expired)
-    return res.status(403).json({ error: "Invalid or expired token" });
+      if (error.name === "TokenExpiredError") {
+      // Token is valid but expired → allow frontend to refresh it
+        return res.status(403).json({ error: "Token expired" });
+      }
+  
+    // Other token errors (malformed, invalid, etc.)
+    return res.status(401).json({ error: "Invalid token" });
   }
 };
