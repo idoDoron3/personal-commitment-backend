@@ -1038,19 +1038,33 @@ router.get("/tutee-review-pending-lessons", authenticateToken, (req, res) =>
  *               lessonId:
  *                 type: integer
  *                 example: 123
- *                 description: The ID of the lesson to upload report for
+ *                 description: The ID of the lesson to upload the report for
  *               lessonSummary:
  *                 type: string
  *                 example: "Today we covered quadratic equations and their applications. Students practiced solving word problems and graphing quadratic functions."
  *                 description: Detailed summary of what was covered in the lesson
  *               tuteesPresence:
- *                 type: object
- *                 additionalProperties:
- *                   type: boolean
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - tuteeUserId
+ *                     - presence
+ *                   properties:
+ *                     tuteeUserId:
+ *                       type: string
+ *                       example: "tutee123"
+ *                       description: The ID of the tutee
+ *                     presence:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether the tutee was present (true) or absent (false)
+ *                 description: List of tutees and their presence status
  *                 example:
- *                   tutee123: true
- *                   tutee456: false
- *                 description: Object mapping tutee user IDs to their presence status (true for present, false for absent). All tutees must be enrolled in the lesson.
+ *                   - tuteeUserId: "tutee123"
+ *                     presence: true
+ *                   - tuteeUserId: "tutee456"
+ *                     presence: false
  *     responses:
  *       200:
  *         description: Lesson report uploaded successfully
