@@ -187,9 +187,9 @@ module.exports = (sequelize) => {
 
                 // Update lesson summary
                 lessonToUpdate.summary = lessonSummary;
-
                 // Check if any tutee was present
-                const hasPresentTutees = Object.values(tuteesPresence).some(presence => presence === true);
+                // const hasPresentTutees = Object.values(tuteesPresence).some(presence => presence === true); // not working, change to the next line
+                const hasPresentTutees = tuteesPresence.some(t => t.presence === true);
                 // Set status based on tutee presence
                 lessonToUpdate.status = hasPresentTutees ? LESSON_STATUS.COMPLETED : LESSON_STATUS.UNATTENDED;
 
