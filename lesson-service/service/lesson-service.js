@@ -345,9 +345,10 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
             throw new appError('Enrollment in this lesson not found', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
         }
 
-        const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 1 * 60 * 60 * 1000);
-        const SEVEN_DAYS_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 7 * 24 * 60 * 60 * 1000);
+        const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime.getTime() + 1 * 60 * 60 * 1000);
+        const SEVEN_DAYS_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime.getTime() + 7 * 24 * 60 * 60 * 1000);
         const NOW = new Date();
+        
 
         if (NOW < ONE_HOUR_AFTER_APPOINTMENT) {
             throw new appError(
