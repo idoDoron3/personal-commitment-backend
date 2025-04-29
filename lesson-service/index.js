@@ -28,10 +28,9 @@ async function initializeDatabase() {
   }
 }
 
-initRabbitMQ().catch(err => {
-  console.error("❌ Could not connect to RabbitMQ. Exiting...");
-  process.exit(1);
-});
+(async () => {
+  await initRabbitMQ();
+})();
 
 
 // Middleware
