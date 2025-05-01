@@ -58,10 +58,12 @@ exports.handleMentorReviewPublished = async (data) => {
 
 exports.handleStudentReviewSubmitted = async (data) => {
   try {
-    const { lessonId, studentId, clarity, understanding, focus, helpful } = data;
-
+    const { lessonId, mentorId, studentId, clarity, understanding, focus, helpful } = data;
+    console.log("=======mentorId=======");
+    console.log(mentorId);
     await StudentReport.create({
       lessonId,
+      mentorId,
       studentId,
       clarity,
       understanding,
