@@ -3,6 +3,7 @@ const MentorReport = require('../models/MentorReport');
 const StudentReport = require('../models/StudentReport');
 const MentorMetadata = require('../models/MentorMetadata');
 const LESSON_STATUS = require('../constants/lessonStatus');  
+const { getAverageScore, getCompletedLessons } = require('./mentorReportService');
 
 //===========================mq handling of insert data to report service ==========================
 
@@ -170,4 +171,79 @@ exports.getTopMentorsByCompletedLessons = async () => {
       mentorEmail: item.tutorEmail,
       lessonCount: item.lessonCount
   }));
+};
+
+
+exports.calculateAverageLessonsPerMentor = async () => {
+  const completedLessons = await Lesson.find({ status: 'complete' });
+  const totalLessons = completedLessons.length;
+  const totalMentors = await MentorMetadata.countDocuments();
+
+  if (totalMentors === 0) {
+    return 0; 
+  }
+  const average = totalLessons / totalMentors;
+
+  return average;
+};
+
+
+exports.countLessonsCreatedLastWeek = async () => {
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  const count = await Lesson.countDocuments({
+    createdAt: { $gte: sevenDaysAgo, $lte: today },
+    status: { $ne: 'cancelled' } // exclude cancelled lessons
+  });
+
+  return count;
+};
+
+exports.getMentorOverview = async (mentorId) => {
+  const metadata = await MentorMetadata.findOne({ mentorId });
+  if (!metadata) return null;
+
+  const { fullName, mentorEmail } = metadata;
+  const averageScore = await getAverageScore(mentorId);
+  const completedLessons = await getCompletedLessons(mentorId);
+  const totalCompletedLessons = completedLessons.length;
+
+  return {
+    mentorId,
+    fullName,
+    mentorEmail,
+    averageScore: Number(averageScore.toFixed(2)),
+    totalCompletedLessons
+  };
+};
+
+exports.getLessonGradeDistribution = async () => {
+  const results = await Lesson.aggregate([
+    {
+      $match: {
+        status: { $ne: 'cancelled' } // Exclude cancelled lessons
+      }
+    },
+    {
+      $group: {
+        _id: { subjectName: "$subjectName", grade: "$grade" },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        subjectName: "$_id.subjectName",
+        grade: "$_id.grade",
+        count: 1
+      }
+    },
+    {
+      $sort: { subjectName: 1, grade: 1 } // Optional: Sort nicely
+    }
+  ]);
+
+  return results;
 };

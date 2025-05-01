@@ -5,21 +5,40 @@ const { authenticateToken } = require('../middleware/authenticateToken ');
 
 
 router.get(
-    "/average-mentor",
-    authenticateToken,
+    "/average-mentor/:mentorId",
     reportController.getMentorAverageReview
 );
 
 router.get(
-    "/completed-mentoer-lessons",
-    authenticateToken,
+    "/completed-mentoer-lessons/:mentorId",
     reportController.getMentorCompletedLessonsCount
 );
 
 router.get(
     "/top-mentors-completed-lessons",
-    authenticateToken,
     reportController.getTopMentors
 );
+
+router.get(
+    "/avarage-lessons-per-mentor",
+    reportController.getAverageLessonsPerMentor 
+);
+
+router.get(
+    "/lessons-created-last-week",
+    reportController.getLessonsCreatedLastWeek 
+);
+
+router.get(
+    "/mentor-overview/:mentorId",
+    reportController.getMentorOverview 
+);
+
+router.get(
+    "/lesson-grade-distribution",
+    reportController.getLessonGradeDistribution
+);
+
+
 
 module.exports = router;
