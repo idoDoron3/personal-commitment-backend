@@ -2,6 +2,7 @@ const reportService = require('../services/reportService');
 
 
 const eventHandlers = {
+    'mentor.registered': reportService.handleMentorRegistered,//TODO
     'lesson.created': reportService.handleLessonCreated, //CONE
     'lesson.canceled': reportService.handleLessonCanceled, //DONE
     'lesson.edited': reportService.handleLessonEdited, //DONE
