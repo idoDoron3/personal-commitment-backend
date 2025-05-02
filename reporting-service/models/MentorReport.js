@@ -4,8 +4,7 @@ const mentorReportSchema = new mongoose.Schema({
   lessonId: { type: Number, required: true },
   mentorId: { type: String, required: true },
   summary: String,
-  rate: Number,
-  tuteesPresence: [
+  studentsPresence: [
     {
       studentId: String,
       attendanceStatus: { type: String, enum: ['present', 'absent'] }

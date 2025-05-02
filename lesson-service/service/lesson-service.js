@@ -34,11 +34,17 @@ const createLesson = async ({ subjectName, grade, level, description, tutorUserI
             locationOrLink,
         });
         console.log("======publush create lesson=========");
-        await publishEvent('lesson.created', {
-            eventType: 'lesson.created',
-            occurredAt: new Date(),
-            data: lessonToCreate.toJSON()
-        });
+        try {
+            await publishEvent('lesson.created', {
+                eventType: 'lesson.created',
+                occurredAt: new Date(),
+                data: lessonToCreate.toJSON()
+            });
+            console.log("✅ Event published successfully [lesson.created]");
+        } catch (publishError) {
+            console.error("❌ Failed to publish event [lesson.created]:", publishError.message);
+            console.error("Continuing without blocking the main flow...");
+        }
 
         return lessonToCreate;
     } catch (error) {
@@ -76,14 +82,27 @@ const cancelLesson = async (lessonId, tutorUserId) => {
         }
 
         const result = await Lesson.cancelLesson(lessonToCancel);
-        console.log("======publush cancel lesson=========");
-        await publishEvent('lesson.canceled', {
-            eventType: 'lesson.canceled',
-            occurredAt: new Date(),
-            data: result.toJSON()
-        });
+        try {
+            console.log(`[cancelLesson] ======Attempting to publish cancellation event=====`);
+            const eventData = {
+                eventType: 'lesson.canceled',
+                occurredAt: new Date(),
+                data: result.lesson 
+            };            
+            await publishEvent('lesson.canceled', eventData);
+            console.log(`[cancelLesson] Event published successfully`);
+        } catch (publishError) {
+            console.error(`[cancelLesson] Failed to publish event:`, publishError);
+            console.error(`[cancelLesson] Error details:`, {
+                name: publishError.name,
+                message: publishError.message,
+                stack: publishError.stack
+            });
+            console.log(`[cancelLesson] Continuing despite event publishing failure - lesson was successfully canceled`);
+        }
         return result;
     } catch (error) {
+        console.error(`[cancelLesson] Error in cancelLesson:`, error);
         if (error instanceof appError) {
             throw error;
         }
@@ -115,6 +134,20 @@ const editLesson = async (lessonId, tutorUserId, description, format, locationOr
             throw new appError('Lesson cannot be edited in this stage', 400, 'INVALID_STATUS', 'lesson-service:editLesson');
         }
         const updatedLesson = await Lesson.editLesson(lessonToEdit, description, format, locationOrLink);
+        
+        try {
+            console.log("====== Publishing lesson edited ======");
+            await publishEvent('lesson.edited', {
+              eventType: 'lesson.edited',
+              occurredAt: new Date(),
+              data: updatedLesson.toJSON()
+            });
+            console.log("[lesson.edited] Event published successfully");
+          } catch (publishError) {
+            console.error("[lesson.edited] Failed to publish event:", publishError.message);
+            console.error("[lesson.edited] Continuing - edit was successful, event not sent");
+          }
+
         return updatedLesson;
     } catch (error) {
         if (error instanceof appError) {
@@ -195,19 +228,32 @@ const uploadLessonReport = async (lessonId, lessonSummary, tuteesPresence, tutor
             );
         }
         const updatedLesson = await Lesson.uploadLessonReport(lessonToUploadReport, lessonSummary, tuteesPresence);
+
+        const studentsPresence = updatedLesson.enrolledTutees.map(t => ({
+            studentId: t.tuteeUserId,
+            studentFullName: t.tuteeFullName,
+            attendanceStatus: t.presence ? 'present' : 'absent'
+          }));
+
         console.log("======publush mentor review=========");
-        await publishEvent('mentor.review.published', {
-            eventType: 'mentor.review.published',
-            occurredAt: new Date(),
-            data: {
-                lessonId: lessonId,
-                tutorId: tutorUserId,
-                report: {
-                    summary: lessonSummary,
-                    tuteesPresence: tuteesPresence
+        try {
+            await publishEvent('mentor.review.published', {
+                eventType: 'mentor.review.published',
+                occurredAt: new Date(),
+                data: {
+                    lessonId: lessonId,
+                    mentorId: tutorUserId,
+                    report: {
+                        summary: lessonSummary,
+                        studentsPresence: studentsPresence
+                    }
                 }
-            }
-        });
+            });
+            console.log("✅ Event published successfully [mentor.review.published]");
+        } catch (publishError) {
+            console.error("❌ Failed to publish event [mentor.review.published]:", publishError.message);
+            console.error("Continuing without blocking the main flow...");
+        }
         return updatedLesson;
         
     } catch (error) {
@@ -356,7 +402,7 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
             throw new appError('Lesson not found', 404, 'LESSON_NOT_FOUND', 'lesson-service:addReview');
         }
 
-        if (lesson.status !== LESSON_STATUS.CREATED) {
+        if (lesson.status !== LESSON_STATUS.CREATED) { //TODO - check with amit and itay whystatis after mentor review unattended
             throw new appError('Cannot review lesson in this stage', 400, 'INVALID_LESSON_STATE', 'lesson-service:addReview');
         }
 
@@ -372,8 +418,8 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
             throw new appError('Enrollment in this lesson not found', 403, 'NOT_ENROLLED', 'lesson-service:addReview');
         }
 
-        const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 1 * 60 * 60 * 1000);
-        const SEVEN_DAYS_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime + 7 * 24 * 60 * 60 * 1000);
+        const ONE_HOUR_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime.getTime() + 1 * 60 * 60 * 1000);
+        const SEVEN_DAYS_AFTER_APPOINTMENT = new Date(lesson.appointedDateTime.getTime() + 7 * 24 * 60 * 60 * 1000);
         const NOW = new Date();
 
         if (NOW < ONE_HOUR_AFTER_APPOINTMENT) {
@@ -401,6 +447,30 @@ const addReview = async (lessonId, tuteeUserId, clarity, understanding, focus, h
 
         // Update the record with the review ratings
         const reviewedLessonByTutee = await TuteeLesson.addReview(tuteeInLessonToReview, clarity, understanding, focus, helpful);
+        
+        
+        console.log("======publish student review=========");
+        
+        try {
+            await publishEvent('student.review.submitted', {
+                eventType: 'student.review.submitted',
+                occurredAt: new Date(),
+                data: {
+                    lessonId: lessonId,
+                    mentorId: lesson.tutorUserId,
+                    studentId: tuteeUserId,
+                    clarity,
+                    understanding,
+                    focus,
+                    helpful
+                }
+            });
+            console.log("✅ Event published successfully [student.review.submitted]");
+        } catch (publishError) {
+            console.error("❌ Failed to publish event [student.review.submitted]:", publishError.message);
+            console.error("Continuing without blocking the main flow...");
+        }
+
         // Update the lesson status to REVIEW_PENDING
         return { lesson, reviewedLessonByTutee };
     } catch (error) {
@@ -438,6 +508,23 @@ const getVerdictPendingLessons = async () => {
 const updateLessonVerdict = async (lessonId, isApproved) => {
     try {
         const updatedLesson = await Lesson.updateLessonVerdict(lessonId, isApproved);
+
+        console.log("======publish lesson verdict updated=========");
+        try {
+            await publishEvent('lesson.verdict.updated', {
+                eventType: 'lesson.verdict.updated',
+                occurredAt: new Date(),
+                data: {
+                    lessonId,
+                    isApproved
+                }
+            });
+            console.log("✅ Event published successfully [lesson.verdict.updated]");
+        } catch (publishError) {
+            console.error("❌ Failed to publish event [lesson.verdict.updated]:", publishError.message);
+            console.error("Continuing without blocking the main flow...");
+        }
+
         return updatedLesson;
     } catch (error) {
         if (error instanceof appError) {
