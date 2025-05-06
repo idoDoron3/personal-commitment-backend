@@ -25,9 +25,18 @@ const adminOnlyRoutes = new Set([
   "/admin/remove-subject",
   "/admin/add-user",
   "/admin/delete-user",
+  // REPORTS ROUTES
+  "/reports/average-lessons-per-mentor",
+  "/reports/lessons-created-last-week",
+  "/reports/mentor-overview",
+  "/reports/average-mentor",
+  "/reports/completed-mentor-lessons",
+  "/reports/top-mentors-completed-lessons",
+  "/reports/lesson-grade-distribution"
+
 ]);
 
-const routesRequiringCookies = new Set(["/login", "/refresh"]);
+// const routesRequiringCookies = new Set(["/login", "/refresh"]);
 
 // Forwards HTTP requests to the appropriate microservice
 exports.forwardRequest = async (req, res, service, endpoint) => {
@@ -53,7 +62,8 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       }
 
       // 🛡️ בדיקה האם מדובר בנתיב אדמין
-      if (adminOnlyRoutes.has(endpoint)) {
+      // if (adminOnlyRoutes.has(endpoint)) {
+      if ([...adminOnlyRoutes].some(route => endpoint.startsWith(route))) {
         try {
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
           if (decoded.role !== "admin") {
@@ -68,11 +78,6 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // // Add Cookies to headers if available
-    // if (req.headers.cookie) {
-    //   headers["Cookie"] = req.headers.cookie;
-    // }
-
     //Forward the request to the specified service and endpoint
     const response = await axios({
       method: req.method,
@@ -81,17 +86,6 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
       headers: headers,
       withCredentials: true, //  adding cookies, if not working delete this
     });
-
-    // // העברת ה-cookies ללקוח רק אם ה-endpoint דורש זאת
-    // if (routesRequiringCookies.has(endpoint)) {
-    //   const cookies = response.headers["set-cookie"];
-    //   if (cookies) {
-    //     cookies.forEach((cookie) => {
-    //       res.append("Set-Cookie", cookie); // מעביר את ה-cookie ללקוח
-    //     });
-    //   }
-    // }
-
     // Return the response from the microservice
     res.status(response.status).json(response.data);
   } catch (error) {
@@ -103,7 +97,7 @@ exports.forwardRequest = async (req, res, service, endpoint) => {
   }
 };
 
-// 📦 Home Aggregation Endpoint
+// Home Aggregation Endpoint
 exports.getHomeData = async (req, res) => {
   try {
     const result = await aggregateHomeData(req);

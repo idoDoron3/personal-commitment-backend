@@ -3,7 +3,7 @@ const MentorReport = require('../models/MentorReport');
 const StudentReport = require('../models/StudentReport');
 const MentorMetadata = require('../models/MentorMetadata');
 const LESSON_STATUS = require('../constants/lessonStatus');  
-const { getAverageScore, getCompletedLessons } = require('./mentorReportService');
+const { getAverageScore, getCompletedLessons, countCompletedLessons, ensureMentorExists } = require('./mentorReportHelper');
 
 //===========================mq handling of insert data to report service ==========================
 
@@ -108,6 +108,7 @@ exports.handleMentorRegistered = async (mentorData) => {
  //=============================fetch report with controller to the gateway======================
 
  exports.getMentorAverageScore = async (mentorId) => {
+  await ensureMentorExists(mentorId);
   const reports = await StudentReport.find({ mentorId });
 
   if (!reports.length) {
@@ -140,13 +141,9 @@ exports.handleMentorRegistered = async (mentorData) => {
   };
 };
 
-exports.getCompletedLessonsCount = async (mentorId) => {
-  const count = await Lesson.countDocuments({
-      tutorUserId: mentorId,
-      status: 'completed'
-  });
-
-  return count;
+exports.getMentorCompletedLessonsCount = async (mentorId) => {
+  await ensureMentorExists(mentorId);
+  return await countCompletedLessons(mentorId);
 };
 
 
@@ -175,7 +172,7 @@ exports.getTopMentorsByCompletedLessons = async () => {
 
 
 exports.calculateAverageLessonsPerMentor = async () => {
-  const completedLessons = await Lesson.find({ status: 'complete' });
+  const completedLessons = await Lesson.find({ status: 'completed' });
   const totalLessons = completedLessons.length;
   const totalMentors = await MentorMetadata.countDocuments();
 
@@ -202,13 +199,14 @@ exports.countLessonsCreatedLastWeek = async () => {
 };
 
 exports.getMentorOverview = async (mentorId) => {
+  await ensureMentorExists(mentorId);
   const metadata = await MentorMetadata.findOne({ mentorId });
   if (!metadata) return null;
 
   const { fullName, mentorEmail } = metadata;
   const averageScore = await getAverageScore(mentorId);
-  const completedLessons = await getCompletedLessons(mentorId);
-  const totalCompletedLessons = completedLessons.length;
+  // const completedLessons = await getCompletedLessons(mentorId);
+  const totalCompletedLessons = countCompletedLessons(mentorId);
 
   return {
     mentorId,

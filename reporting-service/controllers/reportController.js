@@ -55,7 +55,6 @@ exports.getLessonsCreatedLastWeek = async (req, res) => {
 exports.getMentorOverview = async (req, res) => {
   try {
     const { mentorId } = req.params;
-
     const overview = await reportService.getMentorOverview(mentorId);
 
     if (!overview) {

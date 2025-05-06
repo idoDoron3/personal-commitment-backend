@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const { authenticateToken } = require('../middleware/authenticateToken ');
 
 
 router.get(
@@ -20,7 +19,7 @@ router.get(
 );
 
 router.get(
-    "/avarage-lessons-per-mentor",
+    "/average-lessons-per-mentor",
     reportController.getAverageLessonsPerMentor 
 );
 

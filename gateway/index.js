@@ -4,6 +4,8 @@ const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoute");
 const lessonRoutes = require("./routes/lessonRoute");
 const aggregatorRoutes = require("./routes/aggregator-router");
+const reportRoutes = require("./routes/reportsRoute");
+
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors"); // ייבוא CORS
@@ -47,6 +49,8 @@ app.use("/auth", authRoutes); // Route for auth service
 app.use("/home", aggregatorRoutes);
 
 app.use("/lessons", lessonRoutes); // Route for lesson service
+app.use('/reports', reportRoutes);
+
 // Example route
 app.get("/", (req, res) => {
   res.send("API Gateway is running...");
@@ -56,12 +60,12 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 // app.listen(PORT, () => {
 //   console.log(`API Gateway running on port ${PORT}`);
-//   // console.log(
-//   //   `Swagger documentation available at: http://132.73.210.155:${PORT}/api-docs`
-//   // );
-//   console.log(
-//     `Swagger documentation available at: http://localhost:${PORT}/api-docs`
-//   );
+  console.log(
+    `Swagger documentation available at: http://132.73.210.155:${PORT}/api-docs`
+  );
+  console.log(
+    `Swagger documentation available at: http://localhost:${PORT}/api-docs`
+  );
 // });
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Gateway listening on http://0.0.0.0:${PORT}`);
