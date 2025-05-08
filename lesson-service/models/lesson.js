@@ -271,58 +271,58 @@ module.exports = (sequelize) => {
 
         static async getLessonsOfTutee(tuteeUserId, lessonCategory) {
             try {
-              const now = new Date();
-              const ONE_HOUR_AGO = new Date(now.getTime() - (1 * 60 * 60 * 1000));
-              const SEVEN_DAYS_AGO = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-          
-              let whereClause = {
-                status: LESSON_STATUS.CREATED
-              };
-          
-              if (lessonCategory === 'upcoming') {
-                whereClause.appointedDateTime = { [Op.gte]: now };
-              } else if (lessonCategory === 'reviewPending') {
-                whereClause.appointedDateTime = {
-                  [Op.and]: [
-                    { [Op.lt]: ONE_HOUR_AGO }, // past dates
-                    { [Op.gte]: SEVEN_DAYS_AGO } // but not longer than 7 days ago
-                  ]
-                };
-              } else {
-                throw new appError('Fetching lessons failed', 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
-              }
-          
-              const lessons = await Lesson.findAll({
-                where: whereClause,
-                order: [['appointedDateTime', 'ASC']],
-                include: [
-                  {
-                    model: sequelize.models.TuteeLesson,
-                    as: 'enrolledTutees',
-                    where: {
-                      tuteeUserId: tuteeUserId,
-                      clarity: null,
-                      understanding: null,
-                      focus: null,
-                      helpful: null
-                    },
-                    attributes: ['tuteeFullName'],
-                    required: true
-                  }
-                ]
-              });
-          
-              return lessons;
-            } catch (error) {
-              if (error instanceof appError) {
-                throw error;
-              }
-              throw new appError('Fetching lessons failed', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutee');
-            }
-          }
-          
+                const now = new Date();
+                const ONE_HOUR_AGO = new Date(now.getTime() - (1 * 60 * 60 * 1000));
+                const SEVEN_DAYS_AGO = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-        
+                let whereClause = {
+                    status: LESSON_STATUS.CREATED
+                };
+
+                if (lessonCategory === 'upcoming') {
+                    whereClause.appointedDateTime = { [Op.gte]: now };
+                } else if (lessonCategory === 'reviewPending') {
+                    whereClause.appointedDateTime = {
+                        [Op.and]: [
+                            { [Op.lt]: ONE_HOUR_AGO }, // past dates
+                            { [Op.gte]: SEVEN_DAYS_AGO } // but not longer than 7 days ago
+                        ]
+                    };
+                } else {
+                    throw new appError('Fetching lessons failed', 400, 'INVALID_LESSON_CATEGORY', 'lesson-model:getLessonsOfTutee');
+                }
+
+                const lessons = await Lesson.findAll({
+                    where: whereClause,
+                    order: [['appointedDateTime', 'ASC']],
+                    include: [
+                        {
+                            model: sequelize.models.TuteeLesson,
+                            as: 'enrolledTutees',
+                            where: {
+                                tuteeUserId: tuteeUserId,
+                                clarity: null,
+                                understanding: null,
+                                focus: null,
+                                helpful: null
+                            },
+                            attributes: ['tuteeFullName'],
+                            required: true
+                        }
+                    ]
+                });
+
+                return lessons;
+            } catch (error) {
+                if (error instanceof appError) {
+                    throw error;
+                }
+                throw new appError('Fetching lessons failed', 500, 'MODEL_ERROR', 'lesson-model:getLessonsOfTutee');
+            }
+        }
+
+
+
 
         static async enrollToLesson(lessonToEnroll, tuteeUserId, tuteeFullName, tuteeEmail) {
             const transaction = await sequelize.transaction();
@@ -459,7 +459,14 @@ module.exports = (sequelize) => {
                         status: {
                             [Op.or]: [LESSON_STATUS.COMPLETED, LESSON_STATUS.UNATTENDED]
                         }
-                    }
+                    },
+                    include: [
+                        {
+                            model: sequelize.models.TuteeLesson,
+                            as: 'enrolledTutees', // use the alias defined in Lesson.associate
+                            attributes: ['tuteeUserId', 'tuteeFullName', 'presence']
+                        }
+                    ]
                 });
                 return verdictPendingLessons;
             } catch (error) {
