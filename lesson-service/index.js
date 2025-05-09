@@ -9,7 +9,9 @@ const { errorHandler } = require("./utils/errors/errorHandler");
 const { initRabbitMQ } = require('./messaging/producer');
 
 require("dotenv").config(); // Load env variables from .env
-
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 const app = express();
 const PORT = process.env.SERVER_PORT || 3002; // Match pattern from auth-service
 

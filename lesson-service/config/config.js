@@ -1,5 +1,7 @@
-require('dotenv').config();
-
+// require('dotenv').config();
+if (!process.env.RUNNING_IN_DOCKER) {
+    require("dotenv").config();
+  }
 module.exports = {
     development: {
         username: process.env.DB_USER,

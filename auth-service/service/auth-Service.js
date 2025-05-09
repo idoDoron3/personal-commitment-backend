@@ -8,8 +8,10 @@ const ms = require("ms");
 const { publishEvent } = require('../messaging/producer');
 
 
-require("dotenv").config();
-
+// require("dotenv").config();
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 // Registers a new user
 exports.registerUser = async (first_name, last_name, email, password) => {
   const signUser = await User.findOne({ email });

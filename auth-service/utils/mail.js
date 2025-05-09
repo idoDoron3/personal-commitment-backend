@@ -31,8 +31,10 @@
 // module.exports = sendEmail;
 
 const nodemailer = require("nodemailer");
-require("dotenv").config();
-
+// require("dotenv").config();
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 // הגדרת transporter לפי פרטי SMTP של Brevo
 const transporter = nodemailer.createTransport({
   host: process.env.BREVO_HOST, // למשל: smtp-relay.brevo.com

@@ -10,8 +10,10 @@ const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors"); // ייבוא CORS
 
-require("dotenv").config();
-
+// require("dotenv").config();
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 // app.use(
 //   cors({
 //     origin: "http://localhost:3000", // כתובת הלקוח
