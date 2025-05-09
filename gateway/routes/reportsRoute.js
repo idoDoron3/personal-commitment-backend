@@ -58,6 +58,36 @@ const { authenticateToken } = require("../middleware/auth-middleware");
 router.get("/average-mentor/:mentorId", authenticateToken, (req, res) =>
     gatewayController.handleRequest(req, res, "report", `/average-mentor/${req.params.mentorId}`)
 );
+
+/**
+ * @swagger
+ * /reports/average-mentor:
+ *   get:
+ *     summary: Get the average review score across all mentors
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Average review scores
+ *         content:
+ *           application/json:
+ *             example:
+ *               averageScore: 4.36
+ *               clarity: 4.5
+ *               understanding: 4.2
+ *               focus: 4.3
+ *               helpful: 4.4
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admins only
+ */
+router.get(
+    "/average-mentor",authenticateToken,(req, res) =>
+      gatewayController.handleRequest(req, res, "report", "/average-mentor")
+  );
+  
 /**
  * @swagger
  * /completed-mentoer-lessons/{mentorId}:
@@ -232,7 +262,31 @@ router.get("/mentor-overview/:mentorId", authenticateToken, (req, res) =>
 router.get("/lesson-grade-distribution", authenticateToken, (req, res) =>
     gatewayController.handleRequest(req, res, "report", "/lesson-grade-distribution")
 );
-
+/**
+ * @swagger
+ * /reports/get-all-mentors-metadata:
+ *   get:
+ *     summary: Get all mentors metadata
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of mentors with id, name and email
+ *         content:
+ *           application/json:
+ *             example:
+ *               - mentorId: 123
+ *                 mentorName: John Doe
+ *                 mentorEmail: john@example.com
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admins only
+ */
+router.get("/get-all-mentors-metadata",authenticateToken,(req, res) =>
+      gatewayController.handleRequest(req, res, "report", "/get-all-mentors-metadata")
+  );
 
 
 module.exports = router;

@@ -141,6 +141,39 @@ exports.handleMentorRegistered = async (mentorData) => {
   };
 };
 
+exports.getAllMentorsAverageReview = async () => {
+  const reports = await StudentReport.find();
+
+  if (!reports.length) {
+    return {
+      averageScore: 0,
+      clarity: 0,
+      understanding: 0,
+      focus: 0,
+      helpful: 0
+    };
+  }
+
+  const sums = reports.reduce((acc, report) => {
+    acc.clarity += report.clarity || 0;
+    acc.understanding += report.understanding || 0;
+    acc.focus += report.focus || 0;
+    acc.helpful += report.helpful || 0;
+    acc.averageScore += report.averageScore || 0;
+    return acc;
+  }, { clarity: 0, understanding: 0, focus: 0, helpful: 0, averageScore: 0 });
+
+  const count = reports.length;
+
+  return {
+    averageScore: Math.round((sums.averageScore / count) * 100) / 100,
+    clarity: Math.round((sums.clarity / count) * 100) / 100,
+    understanding: Math.round((sums.understanding / count) * 100) / 100,
+    focus: Math.round((sums.focus / count) * 100) / 100,
+    helpful: Math.round((sums.helpful / count) * 100) / 100
+  };
+};
+
 exports.getMentorCompletedLessonsCount = async (mentorId) => {
   await ensureMentorExists(mentorId);
   return await countCompletedLessons(mentorId);
@@ -244,4 +277,13 @@ exports.getLessonGradeDistribution = async () => {
   ]);
 
   return results;
+};
+
+exports.getAllMentorsMetadata = async () => {
+  const metadataList = await MentorMetadata.find().lean();
+  return metadataList.map(item => ({
+    mentorId: item.mentorId,
+    mentorName: item.fullName,
+    mentorEmail: item.mentorEmail,
+  }));
 };

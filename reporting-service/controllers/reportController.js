@@ -11,6 +11,16 @@ exports.getMentorAverageReview = async (req, res, next) => {
   }
 };
 
+exports.getAllMentorsAverageReview = async (req, res, next) => {
+  try {
+    const average = await reportService.getAllMentorsAverageReview();
+    res.status(200).json({ averageScore: average });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 exports.getMentorCompletedLessonsCount = async (req, res, next) => {
   try {
       const mentorId = req.params.mentorId;
@@ -74,5 +84,14 @@ exports.getLessonGradeDistribution = async (req, res, next) => {
   } catch (err) {
       console.error('❌ Failed to get lesson grade distribution:', err.message);
       next(err);
+  }
+};
+
+exports.getAllMentorsMetadata = async (req, res, next) => {
+  try {
+    const mentors = await reportService.getAllMentorsMetadata();
+    res.status(200).json(mentors);
+  } catch (err) {
+    next(err);
   }
 };

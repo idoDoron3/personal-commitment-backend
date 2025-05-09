@@ -9,6 +9,11 @@ router.get(
 );
 
 router.get(
+    "/average-mentor",
+    reportController.getAllMentorsAverageReview
+  );
+  
+router.get(
     "/completed-mentoer-lessons/:mentorId",
     reportController.getMentorCompletedLessonsCount
 );
@@ -38,6 +43,9 @@ router.get(
     reportController.getLessonGradeDistribution
 );
 
-
+router.get(
+    "/get-all-mentors-metadata",
+    reportController.getAllMentorsMetadata
+  );
 
 module.exports = router;
