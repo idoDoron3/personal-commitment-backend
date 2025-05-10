@@ -37,7 +37,6 @@ services:
       RUNNING_IN_DOCKER: true
       NODE_ENV: development
       MONGO_URI: mongodb://mongo:27017/personal_commitment
-      MONGO_URI_PROD: mongodb+srv://user:pass@cluster.mongodb.net/prod_db
       JWT_SECRET: your_jwt_secret
       JWT_REFRESH_SECRET: your_jwt_refresh_secret
       MAILTRAP_HOST: sandbox.smtp.mailtrap.io
