@@ -24,7 +24,10 @@ exports.aggregateHomeData = async (req) => {
 
   const headers = { Authorization: req.headers.authorization };
   const lessons_base = process.env.LESSON_SERVICE_URL;
-  const reports_base = process.env.REPORTING_SERVICE_URL; //! Amit: make sure this is updated in the .env file
+  const reports_base = process.env.REPORT_SERVICE_URL; //! Amit: make sure this is updated in the .env file
+  console.log("-------------------------------------");
+  // console.log({ reports_base });
+  console.log("-------------------------------------");
 
 
   if (role === "mentor") {
@@ -74,45 +77,50 @@ exports.aggregateHomeData = async (req) => {
   }
 
   if (role === "admin") {
-    // TODO connect all to the reporting service
-    // TODO think about totalCommpletedLessons = completed / approved / both ? 
-    // const overallMentorAvgScoreRes = await axios.get(`${reports_base}/average-mentor`, { headers });
-    // const overallMentorAvgScore = overallMentorAvgScoreRes.data.data
 
-    // const totalCompletedLessonsRes = await axios.get(`${reports_base}/total-completed-lesson`, { headers });
-    // const totalCompletedLessons = totalCommpletedLessonsRes.data.data
+    const overallMentorAvgScoreRes = await axios.get(`${reports_base}/average-mentor`, { headers });
+    const overallMentorAvgScore = overallMentorAvgScoreRes.data.averageScore.averageScore
 
-    // const averageLessonsPerMentorRes = await axios.get(`${reports_base}/average-lessosn-per-mentor`, { headers });
-    // const averageLessonsPerMentor = averageLessonsPerMentorRes.data.data
+    const totalApprovedLessonsRes = await axios.get(`${reports_base}/get-all-approved-lessons`, { headers });
+    const totalApprovedLessons = totalApprovedLessonsRes.data.approvedLessonsCount;
 
-    // const lessonsCreatedLastWeekRes = await axios.get(`${reports_base}/lessons-created-last-week`, { headers });
-    // const lessonsCreatedLastWeek = lessonsCreatedLastWeekRes.data.data
+    const averageLessonsPerMentorRes = await axios.get(`${reports_base}/average-lessons-per-mentor`, { headers });
+    const averageLessonsPerMentor = averageLessonsPerMentorRes.data;
 
-    // const lessonsnsGradeDistributionRes = await axios.get(`${reports_base}/lessonsns-grade-distribution`, { headers });
-    // const lessonsnsGradeDistribution = lessonsnsGradeDistributionRes.data.data
+    const lessonsCreatedLastWeekRes = await axios.get(`${reports_base}/lessons-created-last-week`, { headers });
+    const lessonsCreatedLastWeek = lessonsCreatedLastWeekRes.data;
+
+    const lessonGradeDistributionRes = await axios.get(`${reports_base}/lesson-grade-distribution`, { headers });
+    const lessonGradeDistribution = lessonGradeDistributionRes.data;
+
 
     return {
       role,
       userName: fullName,
-      // ! Amit: those are mocks
-      overallMentorAvgScore: 4.4,
-      totalCompletedLessons: 29, //Aprooved
-      averageLessonsPerMentor: 8.4,
-      lessonsCreatedLastWeek: 22,
-      lessonsnsGradeDistribution:
-        [
-          { "subjectName": "Mathematics", "grade": "7", "count": 7 },
-          { "subjectName": "Mathematics", "grade": "8", "count": 8 },
-          { "subjectName": "Mathematics", "grade": "9", "count": 1 },
-          { "subjectName": "Science", "grade": "9", "count": 9 },
-          { "subjectName": "Science", "grade": "8", "count": 6 },
-          { "subjectName": "History", "grade": "9", "count": 4 },
-          { "subjectName": "English", "grade": "7", "count": 6 },
-          { "subjectName": "English", "grade": "9", "count": 5 },
-          { "subjectName": "Computer Science", "grade": "9", "count": 3 },
-          { "subjectName": "Art", "grade": "8", "count": 2 },
-          { "subjectName": "Physical Education", "grade": "7", "count": 4 },
-        ]
+      // ! Amit: keep mocks until production 
+      overallMentorAvgScore: overallMentorAvgScore,
+      totalApprovedLessons: totalApprovedLessons,
+      averageLessonsPerMentor: averageLessonsPerMentor,
+      lessonsCreatedLastWeek: lessonsCreatedLastWeek,
+      // lessonsnsGradeDistribution: lessonsnsGradeDistribution,
+      // overallMentorAvgScore: 4.4,
+      // totalCompletedLessons: 29, //Aprooved
+      // averageLessonsPerMentor: 8.4,
+      // lessonsCreatedLastWeek: 22,
+      lessonsnsGradeDistribution: lessonGradeDistribution
+      // [
+      //   { "subjectName": "Mathematics", "grade": "7", "count": 7 },
+      //   { "subjectName": "Mathematics", "grade": "8", "count": 8 },
+      //   { "subjectName": "Mathematics", "grade": "9", "count": 1 },
+      //   { "subjectName": "Science", "grade": "9", "count": 9 },
+      //   { "subjectName": "Science", "grade": "8", "count": 6 },
+      //   { "subjectName": "History", "grade": "9", "count": 4 },
+      //   { "subjectName": "English", "grade": "7", "count": 6 },
+      //   { "subjectName": "English", "grade": "9", "count": 5 },
+      //   { "subjectName": "Computer Science", "grade": "9", "count": 3 },
+      //   { "subjectName": "Art", "grade": "8", "count": 2 },
+      //   { "subjectName": "Physical Education", "grade": "7", "count": 4 },
+      // ]
     };
   }
 
