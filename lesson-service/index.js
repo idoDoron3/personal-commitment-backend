@@ -6,9 +6,12 @@ const swaggerUi = require("swagger-ui-express");
 const lessonRoutes = require("./routes/lessonRoute");
 const { sequelize } = require('./models');
 const { errorHandler } = require("./utils/errors/errorHandler");
+const { initRabbitMQ } = require('./messaging/producer');
 
 require("dotenv").config(); // Load env variables from .env
-
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 const app = express();
 const PORT = process.env.SERVER_PORT || 3002; // Match pattern from auth-service
 
@@ -26,6 +29,11 @@ async function initializeDatabase() {
     process.exit(1); // Exit if we can't connect to database
   }
 }
+
+(async () => {
+  await initRabbitMQ();
+})();
+
 
 // Middleware
 app.use(

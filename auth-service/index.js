@@ -7,10 +7,19 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
 const routs = require("./routes/authRoute");
+const { initRabbitMQ } = require('./messaging/producer');
 
-require("dotenv").config(); // reload data from env file
+// require("dotenv").config(); // reload data from env file
+if (!process.env.RUNNING_IN_DOCKER) {
+  require('dotenv').config();
+}
 // CORS Configuration
 connectDB();
+
+
+(async () => {
+  await initRabbitMQ();
+})();
 
 app.use(
   cors({

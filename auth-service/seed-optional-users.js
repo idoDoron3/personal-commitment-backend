@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
+// const dotenv = require("dotenv");
 const OptionalUser = require("./models/optional-users"); // Update path if needed
 
-dotenv.config();
-
+// dotenv.config();
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,

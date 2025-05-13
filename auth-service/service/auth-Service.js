@@ -5,8 +5,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/mail");
 const ms = require("ms");
-require("dotenv").config();
+const { publishEvent } = require('../messaging/producer');
 
+
+// require("dotenv").config();
+if (!process.env.RUNNING_IN_DOCKER) {
+  require("dotenv").config();
+}
 // Registers a new user
 exports.registerUser = async (first_name, last_name, email, password) => {
   const signUser = await User.findOne({ email });
@@ -39,6 +44,24 @@ exports.registerUser = async (first_name, last_name, email, password) => {
   const user = new User(userData);
 
   await user.save();
+  if (user.role === "mentor") {
+    const mentorData = {
+      mentorId: user._id,
+      fullName: `${user.first_name} ${user.last_name}`,
+      mentorEmail: user.email
+    };
+
+    try {
+      console.log("============publishing register mentor=======")
+      await publishEvent('mentor.registered', {
+        eventType: 'mentor.registered',
+        data: mentorData
+      });
+    } catch (err) {
+      console.error(`[RabbitMQ] Failed to publish mentor.registered event:`, err.message);
+    }
+  }
+
   return user;
 };
 
