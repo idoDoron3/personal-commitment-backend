@@ -100,6 +100,25 @@ const cancelLesson = async (lessonId, tutorUserId) => {
             });
             console.log(`[cancelLesson] Continuing despite event publishing failure - lesson was successfully canceled`);
         }
+        try {
+            const studentIds = result.affectedTutees; // list of tuteeUserIds returned from model
+            if(studentIds.length > 0){
+            await publishEvent('lesson.cancelled.byMentor', {
+                eventType: 'notifyStudentsOnLessonCancellation',
+                data: {
+                    studentIds, // will be resolved to emails in Notification Service
+                    subject: lessonToCancel.subjectName,
+                    date: lessonToCancel.appointedDateTime
+                }
+            });
+            console.log("✅ Notification event published [lesson.cancelled.byMentor]");
+        } else {
+            console.log("ℹ️ No students enrolled — no notification sent.");
+        }
+        } catch (notifyError) {
+        console.error("❌ Failed to publish notification for student emails:", notifyError.message);
+        
+    }
         return result;
     } catch (error) {
         console.error(`[cancelLesson] Error in cancelLesson:`, error);
@@ -376,6 +395,20 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
             throw new appError('Enrollment not found', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         const result = await Lesson.withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson);
+        try {
+            await publishEvent('lesson.cancelled.byStudent', {
+                eventType: 'notifyMentorOnStudentCancellation',
+                data: {
+                    mentorId: lessonToWithdraw.tutorUserId,          // Will resolve to mentor's email
+                    studentId: tuteeUserId,                          // Will resolve to student's full name
+                    subject: lessonToWithdraw.subjectName,
+                    date: lessonToWithdraw.appointedDateTime
+                    }
+                });
+                console.log("✅ Notification event published [lesson.cancelled.byStudent]");
+        } catch (notifyError) {
+        console.error("❌ Failed to publish notification for mentor:", notifyError.message);
+        }
 
         return result;
     } catch (error) {

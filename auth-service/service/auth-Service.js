@@ -44,6 +44,24 @@ exports.registerUser = async (first_name, last_name, email, password) => {
   const user = new User(userData);
 
   await user.save();
+
+  const userPayload = {
+    userId: user._id.toString(),
+    fullName: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    role: user.role,
+  };
+
+  try {
+    await publishEvent('user.registered', {
+      eventType: 'user.registered',
+      data: userPayload
+    });
+    console.log("✅ Published user.registered for notification");
+  } catch (err) {
+    console.error("❌ Failed to publish user.registered:", err.message);
+  }
+
   if (user.role === "mentor") {
     const mentorData = {
       mentorId: user._id,
