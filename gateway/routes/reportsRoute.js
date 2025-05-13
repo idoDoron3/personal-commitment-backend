@@ -288,5 +288,29 @@ router.get("/get-all-mentors-metadata",authenticateToken,(req, res) =>
       gatewayController.handleRequest(req, res, "report", "/get-all-mentors-metadata")
   );
 
+/**
+ * @swagger
+ * /reports/get-all-approved-lessons:
+ *   get:
+ *     summary: Get the total number of approved lessons
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Count of approved lessons
+ *         content:
+ *           application/json:
+ *             example:
+ *               approvedLessonsCount: 42
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admins only
+ */
+router.get(
+  "/get-all-approved-lessons",authenticateToken,(req, res) =>
+    gatewayController.handleRequest(req, res, "report", "/get-all-approved-lessons")
+);
 
 module.exports = router;

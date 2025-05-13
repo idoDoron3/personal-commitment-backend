@@ -95,3 +95,12 @@ exports.getAllMentorsMetadata = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAllApprovedLessons = async (req, res, next) => {
+  try {
+    const lessons = await reportService.getAllApprovedLessons();
+    res.status(200).json(lessons);
+  } catch (err) {
+    next(err);
+  }
+};

@@ -287,3 +287,10 @@ exports.getAllMentorsMetadata = async () => {
     mentorEmail: item.mentorEmail,
   }));
 };
+
+
+
+exports.getAllApprovedLessons = async () => {
+  const count = await Lesson.countDocuments({ status: "approved" });
+  return { approvedLessonsCount: count };
+};

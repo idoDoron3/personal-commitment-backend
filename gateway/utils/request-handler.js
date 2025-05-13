@@ -33,7 +33,9 @@ const adminOnlyRoutes = new Set([
   "/reports/completed-mentor-lessons",
   "/reports/top-mentors-completed-lessons",
   "/reports/lesson-grade-distribution",
-  "/reports/get-all-mentors-metadata"
+  "/reports/get-all-mentors-metadata",
+  "/reports/get-all-approved-lessons"
+
 
 ]);
 

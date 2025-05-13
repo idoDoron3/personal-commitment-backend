@@ -48,4 +48,9 @@ router.get(
     reportController.getAllMentorsMetadata
   );
 
+router.get(
+  "/get-all-approved-lessons",
+  reportController.getAllApprovedLessons
+);
+
 module.exports = router;
