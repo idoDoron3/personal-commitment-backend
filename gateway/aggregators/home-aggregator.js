@@ -21,9 +21,10 @@ const getRandomMotivation = () => {
 
 exports.aggregateHomeData = async (req) => {
   const { userId, role, fullName, email, username } = req.user;
-  
+
   const headers = { Authorization: req.headers.authorization };
   const lessons_base = process.env.LESSON_SERVICE_URL;
+  const reports_base = process.env.REPORTING_SERVICE_URL; //! Amit: make sure this is updated in the .env file
 
 
   if (role === "mentor") {
@@ -38,7 +39,7 @@ exports.aggregateHomeData = async (req) => {
     const nextLesson = lessons
       .filter(lesson => new Date(lesson.appointedDateTime) > now)
       .sort((a, b) => new Date(a.appointedDateTime) - new Date(b.appointedDateTime))[0];
-  
+
     // Calculate total hours
     const totalHours = await axios.get(`${lessons_base}/approved-lessons-amount`, { headers });
     return {
@@ -73,22 +74,45 @@ exports.aggregateHomeData = async (req) => {
   }
 
   if (role === "admin") {
+    // TODO connect all to the reporting service
+    // TODO think about totalCommpletedLessons = completed / approved / both ? 
+    // const overallMentorAvgScoreRes = await axios.get(`${reports_base}/average-mentor`, { headers });
+    // const overallMentorAvgScore = overallMentorAvgScoreRes.data.data
+
+    // const totalCompletedLessonsRes = await axios.get(`${reports_base}/total-completed-lesson`, { headers });
+    // const totalCompletedLessons = totalCommpletedLessonsRes.data.data
+
+    // const averageLessonsPerMentorRes = await axios.get(`${reports_base}/average-lessosn-per-mentor`, { headers });
+    // const averageLessonsPerMentor = averageLessonsPerMentorRes.data.data
+
+    // const lessonsCreatedLastWeekRes = await axios.get(`${reports_base}/lessons-created-last-week`, { headers });
+    // const lessonsCreatedLastWeek = lessonsCreatedLastWeekRes.data.data
+
+    // const lessonsnsGradeDistributionRes = await axios.get(`${reports_base}/lessonsns-grade-distribution`, { headers });
+    // const lessonsnsGradeDistribution = lessonsnsGradeDistributionRes.data.data
+
     return {
       role,
-      userName: "System Admin",
-      mentorAvgScore: 4.5,
-      pendingRequests: [
-        {
-          type: "New Lesson Request",
-          user: "Yossi Levi",
-          requestId: "123",
-        },
-        {
-          type: "Mentor Application",
-          user: "Noa Rosen",
-          requestId: "124",
-        },
-      ],
+      userName: fullName,
+      // ! Amit: those are mocks
+      overallMentorAvgScore: 4.4,
+      totalCompletedLessons: 29, //Aprooved
+      averageLessonsPerMentor: 8.4,
+      lessonsCreatedLastWeek: 22,
+      lessonsnsGradeDistribution:
+        [
+          { "subjectName": "Mathematics", "grade": "7", "count": 7 },
+          { "subjectName": "Mathematics", "grade": "8", "count": 8 },
+          { "subjectName": "Mathematics", "grade": "9", "count": 1 },
+          { "subjectName": "Science", "grade": "9", "count": 9 },
+          { "subjectName": "Science", "grade": "8", "count": 6 },
+          { "subjectName": "History", "grade": "9", "count": 4 },
+          { "subjectName": "English", "grade": "7", "count": 6 },
+          { "subjectName": "English", "grade": "9", "count": 5 },
+          { "subjectName": "Computer Science", "grade": "9", "count": 3 },
+          { "subjectName": "Art", "grade": "8", "count": 2 },
+          { "subjectName": "Physical Education", "grade": "7", "count": 4 },
+        ]
     };
   }
 
