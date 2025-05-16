@@ -103,7 +103,7 @@ const cancelLesson = async (lessonId, tutorUserId) => {
         try {
             const studentIds = result.affectedTutees; // list of tuteeUserIds returned from model
             if(studentIds.length > 0){
-            await publishEvent('lesson.cancelled.byMentor', {
+            await publishEvent('notifyStudentsOnLessonCancellation', {
                 eventType: 'notifyStudentsOnLessonCancellation',
                 data: {
                     studentIds, // will be resolved to emails in Notification Service
@@ -112,6 +112,9 @@ const cancelLesson = async (lessonId, tutorUserId) => {
                 }
             });
             console.log("✅ Notification event published [lesson.cancelled.byMentor]");
+            console.log("========affected students need to recive emails");
+            console.log(studentIds);
+
         } else {
             console.log("ℹ️ No students enrolled — no notification sent.");
         }
@@ -396,11 +399,14 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
         }
         const result = await Lesson.withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson);
         try {
-            await publishEvent('lesson.cancelled.byStudent', {
+            console.log(`📍 withdrawFromLesson called by tuteeId=${tuteeUserId} for lessonId=${lessonId}`);
+            console.log(`📤 Publishing lesson.cancelled.byStudent with mentorId=${lessonToWithdraw.tutorUserId}, studentId=${tuteeUserId}`);
+
+            await publishEvent('notifyMentorOnStudentCancellation', {
                 eventType: 'notifyMentorOnStudentCancellation',
                 data: {
-                    mentorId: lessonToWithdraw.tutorUserId,          // Will resolve to mentor's email
-                    studentId: tuteeUserId,                          // Will resolve to student's full name
+                    mentorId: lessonToWithdraw.tutorUserId,          
+                    studentId: tuteeUserId,                        
                     subject: lessonToWithdraw.subjectName,
                     date: lessonToWithdraw.appointedDateTime
                     }

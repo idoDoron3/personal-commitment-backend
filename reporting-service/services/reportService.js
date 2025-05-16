@@ -13,7 +13,7 @@ exports.handleLessonCreated = async (data) => {
 };
 
 exports.handleLessonCanceled = async (data) => {
-  await Lesson.updateOne({ lessonId: data.id }, { status: 'canceled' });
+  await Lesson.updateOne({ lessonId: data.lessonId }, { status: 'canceled' });
 };
 exports.handleLessonEdited = async (data) => {
   try {

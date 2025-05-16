@@ -28,15 +28,15 @@ const startConsumer = async () => {
   const channel = await connection.createChannel();
 
   await channel.assertExchange(process.env.RABBITMQ_EXCHANGE, 'direct', { durable: true });
-  await channel.assertQueue(process.env.QUEUE_REPORTS, { durable: true });
+  await channel.assertQueue(process.env.QUEUE_NOTIFICATIONS, { durable: true });
 
   for (const routingKey of Object.keys(eventHandlers)) {
-    await channel.bindQueue(process.env.QUEUE_REPORTS, process.env.RABBITMQ_EXCHANGE, routingKey);
+    await channel.bindQueue(process.env.QUEUE_NOTIFICATIONS, process.env.RABBITMQ_EXCHANGE, routingKey);
   }
 
   console.log(`📥 Listening for events: ${Object.keys(eventHandlers).join(', ')}`);
 
-  channel.consume(process.env.QUEUE_REPORTS, async (msg) => {
+  channel.consume(process.env.QUEUE_NOTIFICATIONS, async (msg) => {
     try {
       const event = JSON.parse(msg.content.toString());
       const { eventType, data } = event;

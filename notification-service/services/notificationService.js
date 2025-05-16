@@ -1,8 +1,10 @@
 const { sendEmail } = require('../utils/mail');
 const UserMetadata = require('../models/UserMetadata');
+const formatDate = require('../utils/formatDate');
 
 exports.notifyStudentsOnLessonCancellation = async ({ studentIds, subject, date }) => {
-  const msg = `The lesson "${subject}" scheduled for ${date} has been cancelled by the mentor.`;
+  const readableDate = formatDate(date);
+  const msg = `The lesson "${subject}" scheduled for ${readableDate} has been cancelled by the mentor.`;
   const students = await UserMetadata.find({ userId: { $in: studentIds } });
   for (const student  of students) {
     await sendEmail(student.email, 'Lesson Cancelled', msg);
@@ -10,6 +12,7 @@ exports.notifyStudentsOnLessonCancellation = async ({ studentIds, subject, date 
 };
 
 exports.notifyMentorOnStudentCancellation = async ({ mentorId, studentId, subject, date }) => {
+  const readableDate = formatDate(date);
   const mentor = await UserMetadata.findOne({ userId: mentorId });
   const student = await UserMetadata.findOne({ userId: studentId });
   if (!mentor || !student) {
@@ -17,13 +20,14 @@ exports.notifyMentorOnStudentCancellation = async ({ mentorId, studentId, subjec
     return;
   }
 
-  const msg = `${student.fullName} has cancelled their registration for "${subject}" on ${date}.`;
+  const msg = `${student.fullName} has cancelled their registration for "${subject}" on ${readableDate}.`;
   await sendEmail(mentor.email, 'Student Cancelled Registration', msg);
 };
 
 
 exports.saveUserMetadata = async ({ userId, email, fullName, role }) => {
   try {
+    console.log("📥 Received user.registered event with payload:", { userId, email, fullName, role });
     await UserMetadata.findOneAndUpdate(
       { userId },
       { email, fullName, role },

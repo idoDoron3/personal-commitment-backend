@@ -5,11 +5,11 @@ if (!process.env.RUNNING_IN_DOCKER) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_HOST,      // e.g., smtp-relay.brevo.com
-  port: process.env.BREVO_PORT,      // typically 587
+  host: process.env.BREVO_HOST,      
+  port: process.env.BREVO_PORT,      
   auth: {
-    user: process.env.BREVO_USER,    // your Brevo SMTP user
-    pass: process.env.BREVO_PASS,    // your SMTP password
+    user: process.env.BREVO_USER,    
+    pass: process.env.BREVO_PASS,    
   },
 });
 

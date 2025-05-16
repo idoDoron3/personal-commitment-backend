@@ -53,6 +53,7 @@ exports.registerUser = async (first_name, last_name, email, password) => {
   };
 
   try {
+    console.log("📤 Preparing to publish user.registered to notification service:", userPayload);
     await publishEvent('user.registered', {
       eventType: 'user.registered',
       data: userPayload
