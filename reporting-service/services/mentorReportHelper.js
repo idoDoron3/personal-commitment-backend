@@ -1,6 +1,7 @@
 const Lesson = require('../models/Lesson');
 const StudentReport = require('../models/StudentReport');
 const MentorMetadata = require('../models/MentorMetadata');
+
 const getAverageScore = async (mentorId) => {
   const studentReports = await StudentReport.find({ mentorId });
   if (studentReports.length === 0) return 0;

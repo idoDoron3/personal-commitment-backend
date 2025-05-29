@@ -56,7 +56,8 @@ module.exports = (sequelize) => {
 
                 // Get affected tutees before deleting their records
                 const affectedTutees = lessonToCancel.enrolledTutees.map(record => record.tuteeUserId);
-
+                console.log("=====model lesson affectedstudents====");
+                console.log(affectedTutees);
                 // Remove associated signups (TuteeLesson records)
                 await sequelize.models.TuteeLesson.destroy({
                     where: { lessonId: lessonToCancel.lessonId },

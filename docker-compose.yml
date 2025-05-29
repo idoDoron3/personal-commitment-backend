@@ -111,6 +111,26 @@ services:
       - auth-service
       - lesson-service
       - report-service
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    environment:
+      RUNNING_IN_DOCKER: true
+      PORT: 3004
+      MONGO_URI: mongodb://mongo:27017/notificationsDB
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: lesson.events
+      QUEUE_NOTIFICATIONS: notifications.queue
+      BREVO_HOST: smtp-relay.brevo.com
+      BREVO_PORT: 587
+      BREVO_USER: 8bf827001@smtp-brevo.com
+      BREVO_PASS: O9N5y4sU7023L6xd
+      BREVO_SENDER: tutorpro2026@gmail.com
+    ports:
+      - "3004:3004"
+    depends_on:
+      - mongo
+      - rabbitmq  
 
 volumes:
   mysql_data:

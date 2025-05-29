@@ -100,6 +100,28 @@ const cancelLesson = async (lessonId, tutorUserId) => {
             });
             console.log(`[cancelLesson] Continuing despite event publishing failure - lesson was successfully canceled`);
         }
+        try {
+            const studentIds = result.affectedTutees; // list of tuteeUserIds returned from model
+            if(studentIds.length > 0){
+            await publishEvent('notifyStudentsOnLessonCancellation', {
+                eventType: 'notifyStudentsOnLessonCancellation',
+                data: {
+                    studentIds, // will be resolved to emails in Notification Service
+                    subject: lessonToCancel.subjectName,
+                    date: lessonToCancel.appointedDateTime
+                }
+            });
+            console.log("✅ Notification event published [lesson.cancelled.byMentor]");
+            console.log("========affected students need to recive emails");
+            console.log(studentIds);
+
+        } else {
+            console.log("ℹ️ No students enrolled — no notification sent.");
+        }
+        } catch (notifyError) {
+        console.error("❌ Failed to publish notification for student emails:", notifyError.message);
+        
+    }
         return result;
     } catch (error) {
         console.error(`[cancelLesson] Error in cancelLesson:`, error);
@@ -376,6 +398,23 @@ const withdrawFromLesson = async (lessonId, tuteeUserId) => {
             throw new appError('Enrollment not found', 404, 'NOT_FOUND', 'lesson-service:withdrawFromLesson');
         }
         const result = await Lesson.withdrawFromLesson(lessonToWithdraw, lessonInTuteeLesson);
+        try {
+            console.log(`📍 withdrawFromLesson called by tuteeId=${tuteeUserId} for lessonId=${lessonId}`);
+            console.log(`📤 Publishing lesson.cancelled.byStudent with mentorId=${lessonToWithdraw.tutorUserId}, studentId=${tuteeUserId}`);
+
+            await publishEvent('notifyMentorOnStudentCancellation', {
+                eventType: 'notifyMentorOnStudentCancellation',
+                data: {
+                    mentorId: lessonToWithdraw.tutorUserId,          
+                    studentId: tuteeUserId,                        
+                    subject: lessonToWithdraw.subjectName,
+                    date: lessonToWithdraw.appointedDateTime
+                    }
+                });
+                console.log("✅ Notification event published [lesson.cancelled.byStudent]");
+        } catch (notifyError) {
+        console.error("❌ Failed to publish notification for mentor:", notifyError.message);
+        }
 
         return result;
     } catch (error) {
