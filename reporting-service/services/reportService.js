@@ -281,11 +281,19 @@ exports.getLessonGradeDistribution = async () => {
 
 exports.getAllMentorsMetadata = async () => {
   const metadataList = await MentorMetadata.find().lean();
-  return metadataList.map(item => ({
-    mentorId: item.mentorId,
-    mentorName: item.fullName,
-    mentorEmail: item.mentorEmail,
-  }));
+  const enrichedList = await Promise.all(
+    metadataList.map(async (item) => {
+      const averageScore = await getAverageScore(item.mentorId);
+      return {
+        mentorId: item.mentorId,
+        mentorName: item.fullName,
+        mentorEmail: item.mentorEmail,
+        averageScore: averageScore.toFixed(2)
+      };
+    })
+  );
+
+  return enrichedList;
 };
 
 
