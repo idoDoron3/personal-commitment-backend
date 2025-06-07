@@ -1,5 +1,5 @@
 const lessonService = require("../service/lesson-service");
-
+const { logRequest } = require("../utils/logger");
 
 // *TUTOR
 
@@ -9,10 +9,13 @@ const lessonService = require("../service/lesson-service");
  * @access  Private (Tutor only)
  */
 exports.createLesson = async (req, res, next) => {
+  const start = Date.now();
+
   try {
-    const tutorUserId = req.userId; // Now available from middleware
-    const tutorFullName = req.userFullName; // Now available from middleware
-    const tutorEmail = req.userEmail; // Now available from middleware
+    const tutorUserId = req.userId;
+    const tutorFullName = req.userFullName;
+    const tutorEmail = req.userEmail;
+
     const lesson = await lessonService.createLesson({
       ...req.validatedBody,
       tutorUserId,
@@ -20,13 +23,36 @@ exports.createLesson = async (req, res, next) => {
       tutorEmail,
     });
 
-    res.status(201).json({
+    const duration = Date.now() - start;
+
+    logRequest({
       success: true,
-      message: 'Lesson created successfully',
-      data: { lesson }
+      req,
+      action: "CreateLesson",
+      email: tutorEmail,
+      role: "tutor",
+      status: 201,
+      duration,
     });
 
+    res.status(201).json({
+      success: true,
+      message: "Lesson created successfully",
+      data: { lesson },
+    });
   } catch (err) {
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: false,
+      req,
+      action: "CreateLesson",
+      email: req.userEmail || "unknown",
+      reason: err.message,
+      status: 500,
+      duration,
+    });
+
     next(err);
   }
 };
@@ -36,20 +62,56 @@ exports.createLesson = async (req, res, next) => {
  * @route  PATCH /lessons/cancel
  * @access Private (Tutor only)
  */
+/**
+ * @desc   Cancel a lesson (tutor only)
+ * @route  PATCH /lessons/cancel
+ * @access Private (Tutor only)
+ */
 exports.cancelLesson = async (req, res, next) => {
+  const start = Date.now();
+
   try {
     const tutorUserId = req.userId;
+    const tutorEmail = req.userEmail;
     const lessonId = req.validatedBody.lessonId;
-    const canceledLesson = await lessonService.cancelLesson(lessonId, tutorUserId);
+
+    const canceledLesson = await lessonService.cancelLesson(
+      lessonId,
+      tutorUserId
+    );
+
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: true,
+      req,
+      action: "CancelLesson",
+      email: tutorEmail,
+      role: "tutor",
+      status: 200,
+      duration,
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Lesson canceled successfully',
+      message: "Lesson canceled successfully",
       data: {
         lesson: canceledLesson.lesson,
-      }
+      },
     });
   } catch (err) {
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: false,
+      req,
+      action: "CancelLesson",
+      email: req.userEmail || "unknown",
+      reason: err.message,
+      status: 500,
+      duration,
+    });
+
     next(err);
   }
 };
@@ -60,17 +122,52 @@ exports.cancelLesson = async (req, res, next) => {
  * @access  Private (Tutor only)
  */
 exports.editLesson = async (req, res, next) => {
+  const start = Date.now();
+
   try {
     const tutorUserId = req.userId;
+    const tutorEmail = req.userEmail;
+
     const { lessonId, description, format, locationOrLink } = req.validatedBody;
-    const lesson = await lessonService.editLesson(lessonId, tutorUserId, description, format, locationOrLink);
+
+    const lesson = await lessonService.editLesson(
+      lessonId,
+      tutorUserId,
+      description,
+      format,
+      locationOrLink
+    );
+
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: true,
+      req,
+      action: "EditLesson",
+      email: tutorEmail,
+      role: "tutor",
+      status: 200,
+      duration,
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Lesson updated successfully',
-      data: { lesson }
+      message: "Lesson updated successfully",
+      data: { lesson },
     });
   } catch (err) {
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: false,
+      req,
+      action: "EditLesson",
+      email: req.userEmail || "unknown",
+      reason: err.message,
+      status: 500,
+      duration,
+    });
+
     next(err);
   }
 };
@@ -83,17 +180,18 @@ exports.editLesson = async (req, res, next) => {
 exports.getAmountOfApprovedLessons = async (req, res, next) => {
   try {
     const tutorUserId = req.userId;
-    const amountOfApprovedLessons = await lessonService.getAmountOfApprovedLessons(tutorUserId);
+    const amountOfApprovedLessons =
+      await lessonService.getAmountOfApprovedLessons(tutorUserId);
 
     res.status(200).json({
       success: true,
-      message: 'Amount of approved lessons retrieved successfully',
-      data: { amountOfApprovedLessons }
+      message: "Amount of approved lessons retrieved successfully",
+      data: { amountOfApprovedLessons },
     });
   } catch (err) {
     next(err);
   }
-}
+};
 
 /**
  * @desc    Get all lessons by tutor (upcoming or summary pending)
@@ -103,14 +201,19 @@ exports.getAmountOfApprovedLessons = async (req, res, next) => {
 exports.getLessonsOfTutor = async (req, res, next) => {
   try {
     const tutorUserId = req.userId;
-    const lessonCategory = req.path.includes('summary-pending') ? 'summaryPending' : 'upcoming';
+    const lessonCategory = req.path.includes("summary-pending")
+      ? "summaryPending"
+      : "upcoming";
 
-    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutor(tutorUserId, lessonCategory);
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutor(
+      tutorUserId,
+      lessonCategory
+    );
 
     res.status(200).json({
       success: true,
       message: `Tutor ${lessonCategory} lessons retrieved successfully`,
-      data: { lessonsWithEnrolledTutees }
+      data: { lessonsWithEnrolledTutees },
     });
   } catch (err) {
     next(err);
@@ -127,18 +230,22 @@ exports.uploadLessonReport = async (req, res, next) => {
     const { lessonId, lessonSummary, tuteesPresence } = req.validatedBody;
     const tutorUserId = req.userId;
 
-    const updatedLesson = await lessonService.uploadLessonReport(lessonId, lessonSummary, tuteesPresence, tutorUserId);
+    const updatedLesson = await lessonService.uploadLessonReport(
+      lessonId,
+      lessonSummary,
+      tuteesPresence,
+      tutorUserId
+    );
 
     res.status(200).json({
       success: true,
-      message: 'Lesson report uploaded successfully',
-      data: { updatedLesson }
+      message: "Lesson report uploaded successfully",
+      data: { updatedLesson },
     });
-
   } catch (err) {
     next(err);
   }
-}
+};
 
 //*Tutee
 
@@ -147,17 +254,56 @@ exports.uploadLessonReport = async (req, res, next) => {
  * @route   POST /lessons/available
  * @access  Public
  */
+/**
+ * @desc    Get available lessons filtered by subject(s)
+ * @route   POST /lessons/available
+ * @access  Public
+ */
 exports.searchAvailableLessons = async (req, res, next) => {
+  const start = Date.now();
+
   try {
     const { subjectName, grade, level } = req.validatedBody;
     const tuteeUserId = req.userId;
-    const lessons = await lessonService.searchAvailableLessons(subjectName, grade, level, tuteeUserId);
+    const tuteeEmail = req.userEmail;
+
+    const lessons = await lessonService.searchAvailableLessons(
+      subjectName,
+      grade,
+      level,
+      tuteeUserId
+    );
+
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: true,
+      req,
+      action: "SearchAvailableLessons",
+      email: tuteeEmail || "anonymous",
+      role: "tutee",
+      status: 200,
+      duration,
+    });
+
     res.status(200).json({
       success: true,
-      message: 'Available lessons retrieved successfully',
-      data: { lessons }
+      message: "Available lessons retrieved successfully",
+      data: { lessons },
     });
   } catch (err) {
+    const duration = Date.now() - start;
+
+    logRequest({
+      success: false,
+      req,
+      action: "SearchAvailableLessons",
+      email: req.userEmail || "anonymous",
+      reason: err.message,
+      status: 500,
+      duration,
+    });
+
     next(err);
   }
 };
@@ -170,14 +316,19 @@ exports.searchAvailableLessons = async (req, res, next) => {
 exports.getLessonsOfTutee = async (req, res, next) => {
   try {
     const tuteeUserId = req.userId;
-    const lessonCategory = req.path.includes('review-pending') ? 'reviewPending' : 'upcoming';
+    const lessonCategory = req.path.includes("review-pending")
+      ? "reviewPending"
+      : "upcoming";
 
-    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee(tuteeUserId, lessonCategory);
+    const lessonsWithEnrolledTutees = await lessonService.getLessonsOfTutee(
+      tuteeUserId,
+      lessonCategory
+    );
 
     res.status(200).json({
       success: true,
       message: `Tutee ${lessonCategory} lessons retrieved successfully`,
-      data: { lessonsWithEnrolledTutees }
+      data: { lessonsWithEnrolledTutees },
     });
   } catch (err) {
     next(err);
@@ -196,12 +347,17 @@ exports.enrollToLesson = async (req, res, next) => {
     const tuteeFullName = req.userFullName;
     const tuteeEmail = req.userEmail;
 
-    const enrollment = await lessonService.enrollToLesson(lessonId, tuteeUserId, tuteeFullName, tuteeEmail);
+    const enrollment = await lessonService.enrollToLesson(
+      lessonId,
+      tuteeUserId,
+      tuteeFullName,
+      tuteeEmail
+    );
 
     res.status(200).json({
       success: true,
-      message: 'Enrolled in lesson successfully',
-      data: { enrollment }
+      message: "Enrolled in lesson successfully",
+      data: { enrollment },
     });
   } catch (err) {
     next(err);
@@ -217,11 +373,14 @@ exports.withdrawFromLesson = async (req, res, next) => {
   try {
     const tuteeUserId = req.userId;
     const { lessonId } = req.validatedBody;
-    const updatedLesson = await lessonService.withdrawFromLesson(lessonId, tuteeUserId);
+    const updatedLesson = await lessonService.withdrawFromLesson(
+      lessonId,
+      tuteeUserId
+    );
     res.status(200).json({
       success: true,
-      message: 'Withdrawn from lesson successfully',
-      data: { lesson: updatedLesson }
+      message: "Withdrawn from lesson successfully",
+      data: { lesson: updatedLesson },
     });
   } catch (err) {
     next(err);
@@ -236,12 +395,20 @@ exports.withdrawFromLesson = async (req, res, next) => {
 exports.addReview = async (req, res, next) => {
   try {
     const tuteeUserId = req.userId; // From JWT via middleware
-    const { lessonId, clarity, understanding, focus, helpful } = req.validatedBody;
-    const result = await lessonService.addReview(lessonId, tuteeUserId, clarity, understanding, focus, helpful);
+    const { lessonId, clarity, understanding, focus, helpful } =
+      req.validatedBody;
+    const result = await lessonService.addReview(
+      lessonId,
+      tuteeUserId,
+      clarity,
+      understanding,
+      focus,
+      helpful
+    );
     res.status(201).json({
       success: true,
-      message: 'Review added successfully',
-      data: { review: result }
+      message: "Review added successfully",
+      data: { review: result },
     });
   } catch (err) {
     next(err);
@@ -257,16 +424,17 @@ exports.addReview = async (req, res, next) => {
  */
 exports.getVerdictPendingLessons = async (req, res, next) => {
   try {
-    const verdictPendingLessons = await lessonService.getVerdictPendingLessons();
+    const verdictPendingLessons =
+      await lessonService.getVerdictPendingLessons();
     res.status(200).json({
       success: true,
-      message: 'Verdict pending lessons retrieved successfully',
-      data: { verdictPendingLessons }
+      message: "Verdict pending lessons retrieved successfully",
+      data: { verdictPendingLessons },
     });
   } catch (err) {
     next(err);
   }
-}
+};
 
 /**
  * @desc    Update a lesson verdict
@@ -276,13 +444,16 @@ exports.getVerdictPendingLessons = async (req, res, next) => {
 exports.updateLessonVerdict = async (req, res, next) => {
   try {
     const { lessonId, isApproved } = req.validatedBody;
-    const updatedLesson = await lessonService.updateLessonVerdict(lessonId, isApproved);
+    const updatedLesson = await lessonService.updateLessonVerdict(
+      lessonId,
+      isApproved
+    );
     res.status(200).json({
       success: true,
-      message: 'Lesson verdict updated successfully',
-      data: { updatedLesson }
+      message: "Lesson verdict updated successfully",
+      data: { updatedLesson },
     });
   } catch (err) {
     next(err);
   }
-}
+};

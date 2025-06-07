@@ -1,0 +1,11 @@
+[2025-06-07 17:03:32] ERROR: Registration failed | method=POST | endpoint=/auth/register | email=ido@example.com | ip=::1 | status=409 | duration=9ms | reason=This email is already in use
+[2025-06-07 17:04:50] INFO: Login succeeded | method=POST | endpoint=/auth/login | email=ido@example.com | ip=::1 | status=200 | duration=97ms | role=student
+[2025-06-07 17:17:09] INFO: Login succeeded | method=POST | endpoint=/auth/login | email=ido@example.com | ip=::1 | status=200 | duration=81ms | role=student
+[2025-06-07 17:27:08] INFO: Login succeeded | method=POST | endpoint=/auth/login | email=ido@example.com | ip=::1 | status=200 | duration=81ms | role=student
+[2025-06-07 17:52:14] INFO: Logout succeeded | method=POST | endpoint=/auth/logout | email=unknown | ip=::1 | status=200 | duration=4ms | role=null
+[2025-06-07 17:52:22] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=1ms | reason=Invalid email or password
+[2025-06-07 17:52:25] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=2ms | reason=Invalid email or password
+[2025-06-07 17:52:29] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=4ms | reason=Invalid email or password
+[2025-06-07 17:53:45] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=3ms | reason=Invalid email or password
+[2025-06-07 17:54:11] INFO: Registration succeeded | method=POST | endpoint=/auth/register | email=dana@example.com | ip=::1 | status=201 | duration=92ms | role=mentor
+[2025-06-07 17:54:18] INFO: Login succeeded | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=200 | duration=79ms | role=mentor

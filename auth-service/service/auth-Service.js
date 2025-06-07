@@ -5,8 +5,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/mail");
 const ms = require("ms");
-const { publishEvent } = require('../messaging/producer');
-
+const { publishEvent } = require("../messaging/producer");
 
 // require("dotenv").config();
 if (!process.env.RUNNING_IN_DOCKER) {
@@ -53,12 +52,12 @@ exports.registerUser = async (first_name, last_name, email, password) => {
   };
 
   try {
-    console.log("📤 Preparing to publish user.registered to notification service:", userPayload);
-    await publishEvent('user.registered', {
-      eventType: 'user.registered',
-      data: userPayload
+    //console.log("📤 Preparing to publish user.registered to notification service:", userPayload);
+    await publishEvent("user.registered", {
+      eventType: "user.registered",
+      data: userPayload,
     });
-    console.log("✅ Published user.registered for notification");
+    //console.log("✅ Published user.registered for notification");
   } catch (err) {
     console.error("❌ Failed to publish user.registered:", err.message);
   }
@@ -67,17 +66,20 @@ exports.registerUser = async (first_name, last_name, email, password) => {
     const mentorData = {
       mentorId: user._id,
       fullName: `${user.first_name} ${user.last_name}`,
-      mentorEmail: user.email
+      mentorEmail: user.email,
     };
 
     try {
-      console.log("============publishing register mentor=======")
-      await publishEvent('mentor.registered', {
-        eventType: 'mentor.registered',
-        data: mentorData
+      //console.log("============publishing register mentor=======")
+      await publishEvent("mentor.registered", {
+        eventType: "mentor.registered",
+        data: mentorData,
       });
     } catch (err) {
-      console.error(`[RabbitMQ] Failed to publish mentor.registered event:`, err.message);
+      console.error(
+        `[RabbitMQ] Failed to publish mentor.registered event:`,
+        err.message
+      );
     }
   }
 
@@ -93,7 +95,12 @@ exports.loginUser = async (email, password) => {
 
   //! Amit: modified the payload to include fullName and email
   const accessToken = jwt.sign(
-    { id: user._id, role: user.role, fullName: user.first_name + ' ' + user.last_name, email: user.email },
+    {
+      id: user._id,
+      role: user.role,
+      fullName: user.first_name + " " + user.last_name,
+      email: user.email,
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
@@ -144,7 +151,12 @@ exports.refreshAccessToken = async (req, res) => {
 
     //! Amit: modified the payload to include fullName and email
     const newAccessToken = jwt.sign(
-      { id: user._id, role: user.role, fullName: user.first_name + ' ' + user.last_name, email: user.email },
+      {
+        id: user._id,
+        role: user.role,
+        fullName: user.first_name + " " + user.last_name,
+        email: user.email,
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
     );
@@ -160,7 +172,7 @@ exports.refreshAccessToken = async (req, res) => {
       Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY)
     );
     await tokenRecord.save();
-    console.log("✅ Refresh token updated in DB for user:", user._id);
+    //console.log("✅ Refresh token updated in DB for user:", user._id);
 
     // res.cookie("refreshToken", newRefreshToken, {
     //   httpOnly: true,
@@ -173,7 +185,7 @@ exports.refreshAccessToken = async (req, res) => {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     });
-    } catch (error) {
+  } catch (error) {
     console.error("Error in refreshAccessToken:", error.message);
     return res.status(401).json({ error: error.message });
   }
