@@ -21,7 +21,10 @@ const getRandomMotivation = () => {
 
 exports.aggregateHomeData = async (req) => {
   const { userId, role, fullName, email, username } = req.user;
-
+  const mentorId = req.user.id;  // Get ID from JWT token
+  
+  console.log("Mentor ID from token:", mentorId);
+  
   const headers = { Authorization: req.headers.authorization };
   const lessons_base = process.env.LESSON_SERVICE_URL;
   const reports_base = process.env.REPORT_SERVICE_URL; //! Amit: make sure this is updated in the .env file
@@ -34,8 +37,9 @@ exports.aggregateHomeData = async (req) => {
     // Get all mentor's lessons
     const lessonsRes = await axios.get(`${lessons_base}/tutor-upcoming-lessons`, { headers });
     const lessons = lessonsRes.data.data.lessonsWithEnrolledTutees;
-
-
+    const feedbackStats = await axios.get(`${reports_base}/average-mentor/${mentorId}`, { headers });
+    
+    console.log("Feedback Stats Response:", feedbackStats.data);
 
     // Find next lesson
     const now = new Date();
@@ -51,8 +55,8 @@ exports.aggregateHomeData = async (req) => {
       totalHours: Math.round(totalHours.data.data.amountOfApprovedLessons),
       nextLesson: nextLesson || null,
       feedbackStats: {
-        averageScore: 4.7, //TODO call real API
-        totalFeedbacks: 15 //TODO - use real API
+        averageScore: feedbackStats.data.averageScore || 0,
+        totalFeedbacks: feedbackStats.data.totalReviews || 0
       }
     };
   }
