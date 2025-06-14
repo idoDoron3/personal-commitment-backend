@@ -3,3 +3,5 @@
 [2025-06-07 17:52:25] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=2ms | reason=Invalid email or password
 [2025-06-07 17:52:29] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=4ms | reason=Invalid email or password
 [2025-06-07 17:53:45] ERROR: Login failed | method=POST | endpoint=/auth/login | email=dana@example.com | ip=::1 | status=401 | duration=3ms | reason=Invalid email or password
+[2025-06-14 17:37:00] ERROR: Registration failed | method=POST | endpoint=/auth/register | email=ido@example.com | ip=::1 | status=409 | duration=14ms | reason=This email is already in use
+[2025-06-14 18:16:33] ERROR: Registration failed | method=POST | endpoint=/auth/register | email=avigail@example.com | ip=::1 | status=403 | duration=7ms | reason=Registration is not allowed for this email

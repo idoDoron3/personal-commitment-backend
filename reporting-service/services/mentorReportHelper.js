@@ -11,11 +11,11 @@ const getAverageScore = async (mentorId) => {
 };
 
 const getCompletedLessons = async (mentorId) => {
-  return Lesson.find({ tutorUserId: mentorId, status: 'completed' });
+  return Lesson.find({ tutorUserId: mentorId, status: 'approved' });
 };
 
 const countCompletedLessons = async (mentorId) => {
-  return Lesson.countDocuments({ tutorUserId: mentorId, status: 'completed' });
+  return Lesson.countDocuments({ tutorUserId: mentorId, status: 'approved' });
 };
 
 const ensureMentorExists = async (mentorId) => {

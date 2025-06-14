@@ -1,3 +1,5 @@
 [2025-06-07 17:33:41] INFO: SearchAvailableLessons succeeded | method=POST | endpoint=/lessons/available | email=ido@example.com | ip=::1 | status=200 | duration=11ms | role=tutee
 [2025-06-07 17:54:54] INFO: CreateLesson succeeded | method=POST | endpoint=/lessons/create | email=dana@example.com | ip=::1 | status=201 | duration=44ms | role=tutor
 [2025-06-07 17:55:23] INFO: EditLesson succeeded | method=PATCH | endpoint=/lessons/edit | email=dana@example.com | ip=::1 | status=200 | duration=17ms | role=tutor
+[2025-06-14 17:42:20] INFO: CreateLesson succeeded | method=POST | endpoint=/lessons/create | email=ido@example.com | ip=::1 | status=201 | duration=48ms | role=tutor
+[2025-06-14 17:44:26] INFO: CreateLesson succeeded | method=POST | endpoint=/lessons/create | email=ido@example.com | ip=::1 | status=201 | duration=24ms | role=tutor

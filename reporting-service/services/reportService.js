@@ -284,11 +284,13 @@ exports.getAllMentorsMetadata = async () => {
   const enrichedList = await Promise.all(
     metadataList.map(async (item) => {
       const averageScore = await getAverageScore(item.mentorId);
+      const totalCompletedLessons = await countCompletedLessons(item.mentorId);
       return {
         mentorId: item.mentorId,
         mentorName: item.fullName,
         mentorEmail: item.mentorEmail,
-        averageScore: averageScore.toFixed(2)
+        averageScore: averageScore.toFixed(2),
+        totalCompletedLessons
       };
     })
   );
